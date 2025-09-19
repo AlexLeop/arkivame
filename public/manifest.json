@@ -1,0 +1,16 @@
+{
+  "name": "Arkivame - Knowledge Management",
+  "short_name": "Arkivame", 
+  "description": "Transform conversations into living knowledge",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0A2540",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    }
+  ]
+}

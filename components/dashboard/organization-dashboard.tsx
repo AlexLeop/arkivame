@@ -1,0 +1,584 @@
+
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import Link from 'next/link';
+import { 
+  Search, 
+  Plus, 
+  Filter, 
+  Tag, 
+  MessageSquare, 
+  TrendingUp,
+  Users,
+  Calendar,
+  BarChart3,
+  Archive,
+  Settings,
+  Download,
+  Upload,
+  Star,
+  Clock,
+  Eye,
+  Trash2
+} from 'lucide-react';
+import { ArkivameLogo } from '@/components/ui/arkivame-logo';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { UserMenu } from '@/components/shared/user-menu';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AddKnowledgeModal } from '@/components/modals/add-knowledge-modal';
+import { DeleteConfirmationModal } from '@/components/modals/delete-confirmation-modal';
+import { UsageChart, TagChart } from '@/components/charts/analytics-charts';
+
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  plan: 'FREE' | 'STARTER' | 'BUSINESS' | 'ENTERPRISE';
+}
+
+interface KnowledgeItem {
+  id: string;
+  title: string;
+  content: string;
+  source: 'SLACK' | 'TEAMS' | 'MANUAL';
+  channel: string;
+  author: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  views: number;
+  bookmarked: boolean;
+}
+
+interface OrgStats {
+  totalKnowledge: number;
+  totalTags: number;
+  activeUsers: number;
+  monthlyViews: number;
+}
+
+export function OrganizationDashboard({ organization }: { organization: Organization }) {
+  const { data: session } = useSession();
+  const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
+  const [stats, setStats] = useState<OrgStats>({
+    totalKnowledge: 0,
+    totalTags: 0,
+    activeUsers: 0,
+    monthlyViews: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSource, setSelectedSource] = useState<string>('all');
+  const [selectedTag, setSelectedTag] = useState<string>('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    show: boolean;
+    item: KnowledgeItem | null;
+  }>({ show: false, item: null });
+
+  const fetchData = useCallback(async () => {
+    try {
+      // Fetch knowledge items
+      const knowledgeResponse = await fetch('/api/knowledge');
+      if (knowledgeResponse.ok) {
+        const knowledgeData = await knowledgeResponse.json();
+        setKnowledgeItems(knowledgeData.data || []);
+      }
+
+      // Fetch analytics
+      const analyticsResponse = await fetch('/api/analytics');
+      if (analyticsResponse.ok) {
+        const analyticsData = await analyticsResponse.json();
+        setStats(analyticsData.overview || stats);
+      }
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [stats]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const filteredItems = knowledgeItems.filter(item => {
+    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         item.content.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSource = selectedSource === 'all' || item.source === selectedSource;
+    const matchesTag = selectedTag === 'all' || item.tags.includes(selectedTag);
+    
+    return matchesSearch && matchesSource && matchesTag;
+  });
+
+  const allTags = Array.from(new Set(knowledgeItems.flatMap(item => item.tags)));
+
+  const getSourceBadgeVariant = (source: string) => {
+    switch (source) {
+      case 'SLACK': return 'default';
+      case 'TEAMS': return 'secondary';
+      case 'MANUAL': return 'outline';
+      default: return 'outline';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const handleAddKnowledge = (newKnowledge: KnowledgeItem) => {
+    setKnowledgeItems(prev => [newKnowledge, ...prev]);
+    setStats(prev => ({
+      ...prev,
+      totalKnowledge: prev.totalKnowledge + 1
+    }));
+  };
+
+  const handleDeleteKnowledge = async () => {
+    if (!deleteModal.item) return;
+    
+    try {
+      // In a real app, make API call to delete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setKnowledgeItems(prev => 
+        prev.filter(item => item.id !== deleteModal.item!.id)
+      );
+      
+      setStats(prev => ({
+        ...prev,
+        totalKnowledge: prev.totalKnowledge - 1
+      }));
+
+      setDeleteModal({ show: false, item: null });
+    } catch (error) {
+      console.error('Failed to delete knowledge item:', error);
+      throw error;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p>Loading {organization.name} Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <ArkivameLogo size="sm" />
+            <div className="hidden md:block">
+              <h1 className="text-xl font-semibold">{organization.name}</h1>
+              <p className="text-sm text-muted-foreground">Knowledge Dashboard</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <Badge variant="outline" className="hidden md:flex">
+              <Archive className="mr-1 h-3 w-3" />
+              {stats.totalKnowledge} Items
+            </Badge>
+            <UserMenu />
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Knowledge Items</CardTitle>
+              <Archive className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalKnowledge}</div>
+              <p className="text-xs text-muted-foreground">
+                Captured conversations
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.activeUsers}</div>
+              <p className="text-xs text-muted-foreground">
+                Team members
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tags</CardTitle>
+              <Tag className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalTags}</div>
+              <p className="text-xs text-muted-foreground">
+                Organization categories
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Monthly Views</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.monthlyViews}</div>
+              <p className="text-xs text-muted-foreground">
+                Knowledge accessed
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content */}
+        <Tabs defaultValue="knowledge" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
+            <TabsTrigger value="search">Advanced Search</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="knowledge" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Knowledge Management</CardTitle>
+                    <CardDescription>
+                      Browse and manage your organization&apos;s captured knowledge
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Import
+                    </Button>
+                    <Button size="sm" onClick={() => setShowAddModal(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Knowledge
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex items-center space-x-2 flex-1">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search knowledge..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="max-w-sm"
+                    />
+                  </div>
+                  
+                  <Select value={selectedSource} onValueChange={setSelectedSource}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Source" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sources</SelectItem>
+                      <SelectItem value="SLACK">Slack</SelectItem>
+                      <SelectItem value="TEAMS">Teams</SelectItem>
+                      <SelectItem value="MANUAL">Manual</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={selectedTag} onValueChange={setSelectedTag}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Tag" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Tags</SelectItem>
+                      {allTags.map(tag => (
+                        <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Knowledge Items Table */}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Author</TableHead>
+                      <TableHead>Tags</TableHead>
+                      <TableHead>Views</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          {searchQuery || selectedSource !== 'all' || selectedTag !== 'all' 
+                            ? 'No items match your filters.' 
+                            : 'No knowledge items found. Start by connecting Slack or Teams.'}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredItems.slice(0, 10).map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <div className="max-w-[300px]">
+                              <div className="font-medium truncate">{item.title}</div>
+                              <div className="text-sm text-muted-foreground truncate">
+                                {item.content}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getSourceBadgeVariant(item.source)}>
+                              {item.source}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">{item.author}</div>
+                            <div className="text-xs text-muted-foreground">{item.channel}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {item.tags.slice(0, 2).map(tag => (
+                                <Badge key={tag} variant="outline" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                              {item.tags.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{item.tags.length - 2}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <Eye className="mr-1 h-3 w-3 text-muted-foreground" />
+                              {item.views}
+                            </div>
+                          </TableCell>
+                          <TableCell>{formatDate(item.createdAt)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-1">
+                              <Button variant="ghost" size="sm" title="View details">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                title={item.bookmarked ? "Remove bookmark" : "Add bookmark"}
+                                onClick={() => {
+                                  const updatedItems = knowledgeItems.map(k => 
+                                    k.id === item.id ? { ...k, bookmarked: !k.bookmarked } : k
+                                  );
+                                  setKnowledgeItems(updatedItems);
+                                }}
+                              >
+                                <Star className={`h-4 w-4 ${item.bookmarked ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                title="Delete knowledge"
+                                onClick={() => setDeleteModal({ show: true, item })}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+
+                {filteredItems.length > 10 && (
+                  <div className="flex justify-center">
+                    <Button variant="outline">
+                      Load More ({filteredItems.length - 10} remaining)
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="search" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Advanced Search & Filters</CardTitle>
+                <CardDescription>
+                  Use advanced filters and saved searches to find specific knowledge
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12 text-muted-foreground">
+                  <Search className="h-12 w-12 mx-auto mb-4" />
+                  <h3 className="font-medium mb-2">Advanced Search Coming Soon</h3>
+                  <p className="text-sm">
+                    Advanced search with natural language queries, date ranges, and complex filters
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Usage Analytics</CardTitle>
+                  <CardDescription>Knowledge access patterns</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <UsageChart data={[
+                    { day: 'Mon', views: 145 },
+                    { day: 'Tue', views: 203 },
+                    { day: 'Wed', views: 189 },
+                    { day: 'Thu', views: 234 },
+                    { day: 'Fri', views: 178 },
+                    { day: 'Sat', views: 67 },
+                    { day: 'Sun', views: 89 }
+                  ]} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Popular Content</CardTitle>
+                  <CardDescription>Most accessed knowledge items</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 mb-4">
+                    <TagChart data={[
+                      { name: 'planning', count: 34 },
+                      { name: 'engineering', count: 28 },
+                      { name: 'design', count: 22 },
+                      { name: 'security', count: 18 },
+                      { name: 'performance', count: 15 }
+                    ]} />
+                  </div>
+                  <div className="space-y-3">
+                    {knowledgeItems
+                      .sort((a, b) => b.views - a.views)
+                      .slice(0, 3)
+                      .map((item, index) => (
+                        <div key={item.id} className="flex items-center space-x-4">
+                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{item.title}</p>
+                            <p className="text-xs text-muted-foreground">{item.views} views</p>
+                          </div>
+                          <Badge variant="outline">{item.source}</Badge>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="integrations" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Slack Integration</CardTitle>
+                  <CardDescription>Connect your Slack workspace</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-center py-6">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Automatically capture important Slack conversations
+                    </p>
+                    <Button>Connect Slack</Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Microsoft Teams</CardTitle>
+                  <CardDescription>Connect your Teams workspace</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-center py-6">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Automatically capture important Teams conversations
+                    </p>
+                    <Button variant="outline">Connect Teams</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Modals */}
+      <AddKnowledgeModal
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+        onKnowledgeAdded={handleAddKnowledge}
+      />
+
+      <DeleteConfirmationModal
+        open={deleteModal.show}
+        onOpenChange={(open) => setDeleteModal({ show: open, item: null })}
+        title="Delete Knowledge Item"
+        description={`Are you sure you want to delete "${deleteModal.item?.title}"? This action cannot be undone.`}
+        confirmText="Delete Knowledge"
+        onConfirm={handleDeleteKnowledge}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /super-admin
+Disallow: /api
+Allow: /
+
+Sitemap: https://arkivame.com/sitemap.xml

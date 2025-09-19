@@ -1,0 +1,246 @@
+openapi: 3.0.3
+info:
+  title: Arkivame AI API
+  description: |-
+    API para as funcionalidades de Inteligência Artificial do Arkivame.
+    Esta API fornece endpoints para gerar resumos, extrair itens de ação, detectar tópicos, melhorar buscas e criar embeddings a partir de textos e conversas.
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Servidor da API
+
+tags:
+  - name: AI
+    description: Endpoints relacionados a funcionalidades de IA
+
+paths:
+  /ai/summary:
+    post:
+      tags:
+        - AI
+      summary: Gera um resumo de uma conversa
+      description: Recebe o conteúdo de uma conversa e retorna um resumo conciso gerado por IA.
+      operationId: generateSummary
+      requestBody:
+        description: Array de mensagens da conversa a ser resumida.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatContentRequest'
+      responses:
+        '200':
+          description: Resumo gerado com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary:
+                    type: string
+                    example: "A equipe discutiu a refatoração do módulo de autenticação e Bob ficou responsável por criar o ticket."
+        '400':
+          description: Requisição inválida (ex: corpo da requisição mal formatado).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno do servidor ao tentar gerar o resumo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ai/action-items:
+    post:
+      tags:
+        - AI
+      summary: Extrai itens de ação de uma conversa
+      description: Analisa uma conversa e extrai uma lista de itens de ação (tarefas) que foram definidos.
+      operationId: extractActionItems
+      requestBody:
+        description: Array de mensagens da conversa.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatContentRequest'
+      responses:
+        '200':
+          description: Itens de ação extraídos com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actionItems:
+                    type: array
+                    items:
+                      type: string
+                    example: ["- Criar ticket para refatorar o módulo de autenticação."]
+        '400':
+          description: Requisição inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno do servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ai/topics:
+    post:
+      tags:
+        - AI
+      summary: Detecta tópicos em uma conversa
+      description: Analisa uma conversa e retorna uma lista dos principais tópicos discutidos.
+      operationId: detectTopics
+      requestBody:
+        description: Array de mensagens da conversa.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatContentRequest'
+      responses:
+        '200':
+          description: Tópicos detectados com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  topics:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Refatoração", "Autenticação", "Tickets"]
+        '400':
+          description: Requisição inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno do servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ai/search/improve:
+    post:
+      tags:
+        - AI
+      summary: Melhora uma consulta de busca
+      description: Recebe uma consulta de busca e retorna uma lista de variações e sinônimos para melhorar os resultados da pesquisa.
+      operationId: improveSearchQuery
+      requestBody:
+        description: Consulta de busca a ser melhorada.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  example: "problema login"
+      responses:
+        '200':
+          description: Variações da consulta geradas com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  queries:
+                    type: array
+                    items:
+                      type: string
+                    example: ["problema login", "erro ao entrar", "não consigo acessar a conta"]
+        '400':
+          description: Requisição inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno do servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /ai/embedding:
+    post:
+      tags:
+        - AI
+      summary: Gera um vetor de embedding para um texto
+      description: Converte uma string de texto em um vetor numérico (embedding) para uso em buscas semânticas.
+      operationId: generateEmbedding
+      requestBody:
+        description: Texto para gerar o embedding.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  example: "Como funciona o sistema de faturamento?"
+      responses:
+        '200':
+          description: Embedding gerado com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  embedding:
+                    type: array
+                    items:
+                      type: number
+                    example: [0.012, -0.034, 0.056, "..."]
+        '400':
+          description: Requisição inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno do servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ChatMessage:
+      type: object
+      properties:
+        author:
+          type: string
+          description: O nome do autor da mensagem.
+          example: "Alice"
+        content:
+          type: string
+          description: O conteúdo da mensagem.
+          example: "Devemos refatorar o módulo de autenticação?"
+    ChatContentRequest:
+      type: array
+      items:
+        $ref: '#/components/schemas/ChatMessage'
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Uma mensagem descrevendo o erro.
+          example: "Falha ao gerar resumo"
