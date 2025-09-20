@@ -93,12 +93,66 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // In a real app, you would filter by organization and apply pagination
+    // Extract pagination parameters from URL
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const search = searchParams.get('search') || '';
+    const tags = searchParams.get('tags')?.split(',').filter(Boolean) || [];
+    const source = searchParams.get('source') || '';
+
+    // Validate pagination parameters
+    const validatedPage = Math.max(1, page);
+    const validatedLimit = Math.min(Math.max(1, limit), 100); // Max 100 items per page
+
+    // Filter items based on search criteria
+    let filteredItems = sampleKnowledgeItems;
+
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredItems = filteredItems.filter(item => 
+        item.title.toLowerCase().includes(searchLower) ||
+        item.content.toLowerCase().includes(searchLower) ||
+        item.author.toLowerCase().includes(searchLower)
+      );
+    }
+
+    if (tags.length > 0) {
+      filteredItems = filteredItems.filter(item =>
+        tags.some(tag => item.tags.includes(tag))
+      );
+    }
+
+    if (source) {
+      filteredItems = filteredItems.filter(item => item.source === source);
+    }
+
+    // Apply pagination
+    const startIndex = (validatedPage - 1) * validatedLimit;
+    const endIndex = startIndex + validatedLimit;
+    const paginatedItems = filteredItems.slice(startIndex, endIndex);
+
+    // Calculate pagination metadata
+    const totalItems = filteredItems.length;
+    const totalPages = Math.ceil(totalItems / validatedLimit);
+    const hasNextPage = validatedPage < totalPages;
+    const hasPrevPage = validatedPage > 1;
+
     return NextResponse.json({
-      items: sampleKnowledgeItems,
-      total: sampleKnowledgeItems.length,
-      page: 1,
-      limit: 10
+      items: paginatedItems,
+      pagination: {
+        page: validatedPage,
+        limit: validatedLimit,
+        total: totalItems,
+        totalPages,
+        hasNextPage,
+        hasPrevPage
+      },
+      filters: {
+        search,
+        tags,
+        source
+      }
     });
 
   } catch (error) {

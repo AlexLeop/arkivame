@@ -4,8 +4,8 @@ import {
   InteractionType,
   APIApplicationCommandInteraction,
 } from 'discord-api-types/v10';
-import logger from './lib/logger';
-import { verifyDiscordRequest } from './lib/integrations/discord-service';
+import logger from '@/lib/logger';
+import { verifyDiscordRequest } from '@/lib/integrations/discord-service';
 
 export async function POST(req: Request) {
   const { isValid, interaction } = await verifyDiscordRequest(req);
