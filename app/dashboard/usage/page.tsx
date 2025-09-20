@@ -50,59 +50,57 @@ export default function UsageDashboard() {
 
   const fetchUsageData = async () => {
     try {
-      // Mock data for demonstration
-      const mockData: UsageData = {
-        overview: {
-          users: { current: 12, limit: 25, growth: 8.5 },
-          storage: { current: 3.2, limit: 10, growth: 12.3 },
-          knowledgeItems: { current: 245, limit: 1000, growth: 15.7 },
-          apiCalls: { current: 8500, limit: 50000, growth: -2.1 }
-        },
-        trends: {
-          daily: [
-            { date: '2024-01-01', users: 8, storage: 2.1, items: 180 },
-            { date: '2024-01-02', users: 9, storage: 2.3, items: 195 },
-            { date: '2024-01-03', users: 10, storage: 2.5, items: 210 },
-            { date: '2024-01-04', users: 11, storage: 2.8, items: 225 },
-            { date: '2024-01-05', users: 12, storage: 3.0, items: 235 },
-            { date: '2024-01-06', users: 12, storage: 3.1, items: 240 },
-            { date: '2024-01-07', users: 12, storage: 3.2, items: 245 }
-          ],
-          monthly: [
-            { month: 'Out', users: 5, storage: 1.2, items: 120 },
-            { month: 'Nov', users: 8, storage: 2.1, items: 180 },
-            { month: 'Dez', users: 10, storage: 2.8, items: 220 },
-            { month: 'Jan', users: 12, storage: 3.2, items: 245 }
-          ]
-        },
-        activity: {
-          topUsers: [
-            { name: 'Sarah Chen', email: 'sarah@company.com', items: 45, views: 320 },
-            { name: 'Mike Johnson', email: 'mike@company.com', items: 38, views: 280 },
-            { name: 'Lisa Wang', email: 'lisa@company.com', items: 32, views: 245 },
-            { name: 'David Kim', email: 'david@company.com', items: 28, views: 190 },
-            { name: 'Emma Rodriguez', email: 'emma@company.com', items: 25, views: 175 }
-          ],
-          topContent: [
-            { title: 'Project Alpha Planning Discussion', views: 156, source: 'SLACK', createdAt: '2024-01-01' },
-            { title: 'Database Migration Best Practices', views: 134, source: 'TEAMS', createdAt: '2024-01-02' },
-            { title: 'Security Audit Findings', views: 98, source: 'SLACK', createdAt: '2024-01-03' },
-            { title: 'UI Design System Updates', views: 87, source: 'TEAMS', createdAt: '2024-01-04' },
-            { title: 'Performance Optimization Results', views: 76, source: 'SLACK', createdAt: '2024-01-05' }
-          ],
-          integrations: [
-            { name: 'Slack', usage: 65, status: 'active' },
-            { name: 'Microsoft Teams', usage: 35, status: 'active' },
-            { name: 'Discord', usage: 15, status: 'active' },
-            { name: 'Notion', usage: 8, status: 'inactive' },
-            { name: 'Confluence', usage: 5, status: 'inactive' }
-          ]
-        }
-      };
+      setLoading(true);
       
-      setUsageData(mockData);
+      // Fetch real usage data from API
+      const response = await fetch('/api/analytics/usage');
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUsageData(data);
+      } else {
+        console.error('Failed to fetch usage data:', response.statusText);
+        
+        // Fallback to empty data structure
+        setUsageData({
+          overview: {
+            users: { current: 0, limit: 25, growth: 0 },
+            storage: { current: 0, limit: 10, growth: 0 },
+            knowledgeItems: { current: 0, limit: 1000, growth: 0 },
+            apiCalls: { current: 0, limit: 50000, growth: 0 }
+          },
+          trends: {
+            daily: [],
+            monthly: []
+          },
+          activity: {
+            topUsers: [],
+            topContent: [],
+            integrations: []
+          }
+        });
+      }
     } catch (error) {
       console.error('Error fetching usage data:', error);
+      
+      // Set empty data structure on error
+      setUsageData({
+        overview: {
+          users: { current: 0, limit: 25, growth: 0 },
+          storage: { current: 0, limit: 10, growth: 0 },
+          knowledgeItems: { current: 0, limit: 1000, growth: 0 },
+          apiCalls: { current: 0, limit: 50000, growth: 0 }
+        },
+        trends: {
+          daily: [],
+          monthly: []
+        },
+        activity: {
+          topUsers: [],
+          topContent: [],
+          integrations: []
+        }
+      });
     } finally {
       setLoading(false);
     }

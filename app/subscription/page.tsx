@@ -89,23 +89,46 @@ export default function SubscriptionPage() {
 
   const fetchSubscriptionData = async () => {
     try {
-      // Mock data for demonstration
-      const mockData: SubscriptionData = {
-        plan: PLANS.professional,
+      setLoading(true);
+      
+      // Fetch real subscription data from API
+      const response = await fetch('/api/subscription');
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionData(data);
+      } else {
+        console.error('Failed to fetch subscription data:', response.statusText);
+        
+        // Fallback to default data structure
+        setSubscriptionData({
+          plan: PLANS.starter,
+          status: 'active',
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          cancelAtPeriodEnd: false,
+          usage: {
+            users: { current: 0, limit: 5 },
+            storage: { current: 0, limit: 1 },
+            knowledgeItems: { current: 0, limit: 100 }
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching subscription data:', error);
+      toast.error('Erro ao carregar dados da assinatura');
+      
+      // Set default data on error
+      setSubscriptionData({
+        plan: PLANS.starter,
         status: 'active',
         currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         cancelAtPeriodEnd: false,
         usage: {
-          users: { current: 12, limit: 25 },
-          storage: { current: 3.2, limit: 10 },
-          knowledgeItems: { current: 245, limit: 1000 }
+          users: { current: 0, limit: 5 },
+          storage: { current: 0, limit: 1 },
+          knowledgeItems: { current: 0, limit: 100 }
         }
-      };
-      
-      setSubscriptionData(mockData);
-    } catch (error) {
-      console.error('Error fetching subscription data:', error);
-      toast.error('Erro ao carregar dados da assinatura');
+      });
     } finally {
       setLoading(false);
     }

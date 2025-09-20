@@ -21,7 +21,10 @@ import {
   Star,
   Clock,
   Eye,
-  Trash2
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  User
 } from 'lucide-react';
 import { ArkivameLogo } from '@/components/ui/arkivame-logo';
 import { Button } from '@/components/ui/button';
@@ -47,6 +50,7 @@ import {
 } from "@/components/ui/select";
 import { AddKnowledgeModal } from '@/components/modals/add-knowledge-modal';
 import { DeleteConfirmationModal } from '@/components/modals/delete-confirmation-modal';
+import { KnowledgeDetailModal } from '@/components/modals/knowledge-detail-modal';
 import { UsageChart, TagChart } from '@/components/charts/analytics-charts';
 
 interface Organization {
@@ -95,43 +99,105 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
     show: boolean;
     item: KnowledgeItem | null;
   }>({ show: false, item: null });
+  const [detailModal, setDetailModal] = useState<{
+    show: boolean;
+    itemId: string | null;
+  }>({ show: false, itemId: null });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const itemsPerPage = 10;
+  const [selectedAuthor, setSelectedAuthor] = useState<string>('all');
+  const [selectedDateRange, setSelectedDateRange] = useState<string>('all');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      // Fetch knowledge items
-      const knowledgeResponse = await fetch('/api/knowledge');
+      setLoading(true);
+      
+      // Fetch knowledge items with pagination and filters
+      const knowledgeParams = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+        ...(searchQuery && { search: searchQuery }),
+        ...(selectedSource !== 'all' && { source: selectedSource }),
+        ...(selectedTag !== 'all' && { tags: selectedTag }),
+        ...(selectedAuthor !== 'all' && { author: selectedAuthor }),
+        ...(selectedDateRange !== 'all' && { dateRange: selectedDateRange })
+      });
+      
+      const knowledgeResponse = await fetch(`/api/knowledge?${knowledgeParams}`);
       if (knowledgeResponse.ok) {
         const knowledgeData = await knowledgeResponse.json();
-        setKnowledgeItems(knowledgeData.data || []);
+        
+        if (currentPage === 1) {
+          setKnowledgeItems(knowledgeData.items || []);
+        } else {
+          // Append for infinite scroll
+          setKnowledgeItems(prev => [...prev, ...(knowledgeData.items || [])]);
+        }
+        
+        // Update pagination metadata
+        if (knowledgeData.pagination) {
+          setTotalPages(knowledgeData.pagination.totalPages || 1);
+          setHasMore(knowledgeData.pagination.hasMore || false);
+          
+          // Update stats from pagination metadata
+          setStats(prevStats => ({
+            ...prevStats,
+            totalKnowledge: knowledgeData.pagination.total || 0
+          }));
+        }
+      } else {
+        console.error('Failed to fetch knowledge items:', knowledgeResponse.statusText);
+        if (currentPage === 1) {
+          setKnowledgeItems([]);
+        }
       }
 
-      // Fetch analytics
-      const analyticsResponse = await fetch('/api/analytics');
-      if (analyticsResponse.ok) {
-        const analyticsData = await analyticsResponse.json();
-        setStats(analyticsData.overview || stats);
+      // Fetch analytics data only on first page
+      if (currentPage === 1) {
+        const analyticsResponse = await fetch('/api/analytics');
+        if (analyticsResponse.ok) {
+          const analyticsData = await analyticsResponse.json();
+          setStats(prevStats => ({
+            ...prevStats,
+            totalTags: analyticsData.totalTags || 0,
+            activeUsers: analyticsData.activeUsers || 0,
+            monthlyViews: analyticsData.monthlyViews || 0
+          }));
+        } else {
+          console.error('Failed to fetch analytics:', analyticsResponse.statusText);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
+      if (currentPage === 1) {
+        setKnowledgeItems([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, [stats]);
+  }, [searchQuery, selectedSource, selectedTag, selectedAuthor, selectedDateRange, currentPage, itemsPerPage]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const filteredItems = knowledgeItems.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSource = selectedSource === 'all' || item.source === selectedSource;
-    const matchesTag = selectedTag === 'all' || item.tags.includes(selectedTag);
-    
-    return matchesSearch && matchesSource && matchesTag;
-  });
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    setKnowledgeItems([]);
+  }, [searchQuery, selectedSource, selectedTag, selectedAuthor, selectedDateRange]);
+
+  const loadMore = () => {
+    if (hasMore && !loading) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
 
   const allTags = Array.from(new Set(knowledgeItems.flatMap(item => item.tags)));
+  const allAuthors = Array.from(new Set(knowledgeItems.map(item => item.author)));
 
   const getSourceBadgeVariant = (source: string) => {
     switch (source) {
@@ -304,40 +370,131 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Filters */}
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex items-center space-x-2 flex-1">
-                    <Search className="h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search knowledge..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="max-w-sm"
-                    />
-                  </div>
-                  
-                  <Select value={selectedSource} onValueChange={setSelectedSource}>
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Source" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Sources</SelectItem>
-                      <SelectItem value="SLACK">Slack</SelectItem>
-                      <SelectItem value="TEAMS">Teams</SelectItem>
-                      <SelectItem value="MANUAL">Manual</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-4">
+                  {/* Basic Filters Row */}
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex items-center space-x-2 flex-1">
+                      <Search className="h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search knowledge..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="max-w-sm"
+                      />
+                    </div>
+                    
+                    <Select value={selectedSource} onValueChange={setSelectedSource}>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Sources</SelectItem>
+                        <SelectItem value="SLACK">Slack</SelectItem>
+                        <SelectItem value="TEAMS">Teams</SelectItem>
+                        <SelectItem value="MANUAL">Manual</SelectItem>
+                      </SelectContent>
+                    </Select>
 
-                  <Select value={selectedTag} onValueChange={setSelectedTag}>
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Tag" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Tags</SelectItem>
-                      {allTags.map(tag => (
-                        <SelectItem key={tag} value={tag}>{tag}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                      className="flex items-center gap-2"
+                    >
+                      <Filter className="h-4 w-4" />
+                      Advanced
+                      {showAdvancedFilters ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Advanced Filters Row */}
+                  {showAdvancedFilters && (
+                    <div className="flex flex-col sm:flex-row gap-4 p-4 bg-muted/50 rounded-lg">
+                      <Select value={selectedTag} onValueChange={setSelectedTag}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="Tag" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Tags</SelectItem>
+                          {allTags.map(tag => (
+                            <SelectItem key={tag} value={tag}>
+                              <div className="flex items-center gap-2">
+                                <Tag className="h-3 w-3" />
+                                {tag}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={selectedAuthor} onValueChange={setSelectedAuthor}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="Author" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Authors</SelectItem>
+                          {allAuthors.map(author => (
+                            <SelectItem key={author} value={author}>
+                              <div className="flex items-center gap-2">
+                                <User className="h-3 w-3" />
+                                {author}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="Date Range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Time</SelectItem>
+                          <SelectItem value="today">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              Today
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="week">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              This Week
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="month">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              This Month
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="quarter">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3" />
+                              This Quarter
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedSource('all');
+                          setSelectedTag('all');
+                          setSelectedAuthor('all');
+                          setSelectedDateRange('all');
+                        }}
+                      >
+                        Clear Filters
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Knowledge Items Table */}
@@ -354,7 +511,21 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredItems.length === 0 ? (
+                    {loading && currentPage === 1 ? (
+                      Array.from({ length: 5 }).map((_, index) => (
+                        <TableRow key={index}>
+                          <TableCell colSpan={7}>
+                            <div className="animate-pulse flex space-x-4">
+                              <div className="rounded-full bg-gray-200 h-10 w-10"></div>
+                              <div className="flex-1 space-y-2 py-1">
+                                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : knowledgeItems.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                           {searchQuery || selectedSource !== 'all' || selectedTag !== 'all' 
@@ -363,7 +534,7 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredItems.slice(0, 10).map((item) => (
+                      knowledgeItems.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell>
                             <div className="max-w-[300px]">
@@ -405,7 +576,12 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
                           <TableCell>{formatDate(item.createdAt)}</TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-1">
-                              <Button variant="ghost" size="sm" title="View details">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                title="View details"
+                                onClick={() => setDetailModal({ show: true, itemId: item.id })}
+                              >
                                 <Eye className="h-4 w-4" />
                               </Button>
                               <Button 
@@ -438,10 +614,14 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
                   </TableBody>
                 </Table>
 
-                {filteredItems.length > 10 && (
+                {hasMore && (
                   <div className="flex justify-center">
-                    <Button variant="outline">
-                      Load More ({filteredItems.length - 10} remaining)
+                    <Button 
+                      variant="outline" 
+                      onClick={loadMore}
+                      disabled={loading}
+                    >
+                      {loading ? 'Loading...' : `Load More (${totalPages - currentPage} pages remaining)`}
                     </Button>
                   </div>
                 )}
@@ -574,10 +754,15 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
       <DeleteConfirmationModal
         open={deleteModal.show}
         onOpenChange={(open) => setDeleteModal({ show: open, item: null })}
+        onConfirm={handleDeleteKnowledge}
         title="Delete Knowledge Item"
         description={`Are you sure you want to delete "${deleteModal.item?.title}"? This action cannot be undone.`}
-        confirmText="Delete Knowledge"
-        onConfirm={handleDeleteKnowledge}
+      />
+
+      <KnowledgeDetailModal
+        isOpen={detailModal.show}
+        onClose={() => setDetailModal({ show: false, itemId: null })}
+        itemId={detailModal.itemId}
       />
     </div>
   );
