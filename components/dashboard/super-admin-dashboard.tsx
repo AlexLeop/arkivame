@@ -81,7 +81,7 @@ export function SuperAdminDashboard() {
       const orgsResponse = await fetch('/api/super-admin/organizations');
       if (orgsResponse.ok) {
         const orgsData = await orgsResponse.json();
-        setOrganizations(orgsData.data || []);
+        setOrganizations(orgsData.organizations || []);
       }
 
       // Fetch analytics  

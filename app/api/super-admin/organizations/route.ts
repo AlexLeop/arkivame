@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         include: {
           _count: {
-            select: { users: true, knowledgeBase: true },
+            select: { users: true, knowledgeItems: true },
           },
         },
         orderBy: {
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const formattedOrganizations = organizations.map(org => ({
       ...org,
       userCount: org._count.users,
-      knowledgeCount: org._count.knowledgeBase,
+      knowledgeCount: org._count.knowledgeItems,
     }));
 
     return NextResponse.json({

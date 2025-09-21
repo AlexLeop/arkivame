@@ -84,16 +84,62 @@ async function handleAppLogic(request: NextRequest): Promise<NextResponse> {
   }
 
   // 2. Lógica de frontend/tenant existente para renderização de páginas
-  const response = NextResponse.next();
+  // Proteção para rotas de dashboard
+  if (pathname.startsWith("/dashboard")) {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
-  response.headers.set('x-tenant-host', host);
+    if (!token || !token.sub) {
+      // Se não autenticado, redireciona para a página de login
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", request.url);
+      return NextResponse.redirect(loginUrl);
+    }
 
-  if (pathname.startsWith('/super-admin')) {
-    response.headers.set('x-tenant-type', 'super-admin');
-  } else {
-    response.headers.set('x-tenant-type', 'landing');
+    // Verifica se o usuário tem acesso à organização especificada na URL
+    const orgIdMatch = pathname.match(/^\/dashboard\/([^\/]+)/);
+    if (orgIdMatch) {
+      const organizationId = orgIdMatch[1];
+      try {
+        await validateUserOrgAccess(token.sub, organizationId);
+      } catch (error) {
+        if (error instanceof NotAuthorizedError) {
+          // Redireciona para uma página de erro ou dashboard padrão se não autorizado
+          const errorUrl = new URL("/unauthorized", request.url);
+          return NextResponse.redirect(errorUrl);
+        }
+        logger.error({ err: error as Error, pathname }, "Middleware validation error for dashboard access");
+        const errorUrl = new URL("/error", request.url);
+        return NextResponse.redirect(errorUrl);
+      }
+    }
+
+    // Se autenticado e autorizado, permite o acesso
+    const response = NextResponse.next();
+    response.headers.set("x-tenant-host", host);
+    response.headers.set("x-tenant-type", "dashboard");
+    return response;
   }
-  
+
+  // Lógica para rotas de super-admin
+  if (pathname.startsWith("/super-admin")) {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+
+    if (!token || token.role !== "SUPER_ADMIN") {
+      // Se não for super admin, redireciona para o login ou para uma página de acesso negado
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+    const response = NextResponse.next();
+    response.headers.set("x-tenant-host", host);
+    response.headers.set("x-tenant-type", "super-admin");
+    return response;
+  }
+
+  // Lógica para a landing page e outras rotas públicas
+  const response = NextResponse.next();
+  response.headers.set("x-tenant-host", host);
+  response.headers.set("x-tenant-type", "landing");
   return response;
 }
 

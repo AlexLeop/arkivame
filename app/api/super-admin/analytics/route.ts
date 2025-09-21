@@ -27,10 +27,37 @@ export async function GET(request: NextRequest) {
       _count: { _all: true },
     });
 
+    // Calculate monthly growth
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const organizationsThisMonth = await prisma.organization.count({
+      where: {
+        createdAt: {
+          gte: currentMonth
+        }
+      }
+    });
+    
+    const organizationsLastMonth = await prisma.organization.count({
+      where: {
+        createdAt: {
+          gte: lastMonth,
+          lt: currentMonth
+        }
+      }
+    });
+
+    const monthlyGrowth = organizationsLastMonth > 0 
+      ? Math.round(((organizationsThisMonth - organizationsLastMonth) / organizationsLastMonth) * 100)
+      : 0;
+
     const stats = {
       totalOrganizations,
       activeUsers,
       totalKnowledge,
+      monthlyGrowth,
       planDistribution: planDistribution.reduce((acc, item) => {
         acc[item.plan] = item._count._all;
         return acc;
@@ -46,7 +73,7 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    return NextResponse.json({ stats });
+    return NextResponse.json({ overview: stats });
 
   } catch (error) {
     console.error('Super admin analytics API error:', error);
