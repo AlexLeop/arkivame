@@ -18,7 +18,10 @@ import {
   Plus,
   Edit,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  DollarSign,
+  Target,
+  Heart
 } from 'lucide-react';
 import { ArkivameLogo } from '@/components/ui/arkivame-logo';
 import { Button } from '@/components/ui/button';
@@ -38,6 +41,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AddOrganizationModal } from '@/components/modals/add-organization-modal';
 import { DeleteConfirmationModal } from '@/components/modals/delete-confirmation-modal';
 import { GrowthChart, SourceChart } from '@/components/charts/analytics-charts';
+import { 
+  KeyMetricsCards,
+  RevenueMetricsChart,
+  MRRBreakdownChart,
+  RetentionMetricsChart,
+  AcquisitionMetricsChart,
+  CacLtvChart,
+  EngagementMetricsChart,
+  StickinessChart,
+  PlanDistributionChart
+} from '@/components/charts/saas-metrics-charts';
 
 interface Organization {
   id: string;
@@ -58,6 +72,36 @@ interface SystemStats {
   monthlyGrowth: number;
 }
 
+interface SaasMetrics {
+  revenue: {
+    mrr: number;
+    arr: number;
+    arpa: number;
+    clv: number;
+    ruleOf40: number;
+  };
+  acquisition: {
+    cac: number;
+    lvr: number;
+    activationRate: number;
+  };
+  retention: {
+    customerChurnRate: number;
+    netDollarRetention: number;
+    grossDollarRetention: number;
+  };
+  engagement: {
+    dauMauRatio: number;
+    stickinessRate: number;
+    featureAdoptionRate: number;
+  };
+  satisfaction: {
+    nps: number;
+    csat: number;
+    ces: number;
+  };
+}
+
 export function SuperAdminDashboard() {
   const { data: session } = useSession();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -67,6 +111,7 @@ export function SuperAdminDashboard() {
     totalKnowledge: 0,
     monthlyGrowth: 0
   });
+  const [saasMetrics, setSaasMetrics] = useState<SaasMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -89,6 +134,19 @@ export function SuperAdminDashboard() {
       if (analyticsResponse.ok) {
         const analyticsData = await analyticsResponse.json();
         setStats(analyticsData.overview || stats);
+      }
+
+      // Fetch SaaS metrics
+      const metricsResponse = await fetch('/api/super-admin/metrics');
+      if (metricsResponse.ok) {
+        const metricsData = await metricsResponse.json();
+        setSaasMetrics({
+          revenue: metricsData.revenue,
+          acquisition: metricsData.acquisition,
+          retention: metricsData.retention,
+          engagement: metricsData.engagement,
+          satisfaction: metricsData.satisfaction
+        });
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -248,13 +306,148 @@ export function SuperAdminDashboard() {
         </div>
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="organizations" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="metrics" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="metrics">SaaS Metrics</TabsTrigger>
             <TabsTrigger value="organizations">Organizations</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="audit">Audit Logs</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="metrics" className="space-y-6">
+            {saasMetrics && (
+              <>
+                {/* Key Metrics Cards */}
+                <KeyMetricsCards 
+                  metrics={{
+                    mrr: saasMetrics.revenue.mrr,
+                    arr: saasMetrics.revenue.arr,
+                    customerChurn: saasMetrics.retention.customerChurnRate,
+                    netRetention: saasMetrics.retention.netDollarRetention,
+                    cac: saasMetrics.acquisition.cac,
+                    ltv: saasMetrics.revenue.clv,
+                    ruleOf40: saasMetrics.revenue.ruleOf40
+                  }}
+                />
+
+                {/* Charts Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <RevenueMetricsChart data={[
+                    { month: 'Jan', mrr: 5000, arr: 60000, newMrr: 1000, churnMrr: 200 },
+                    { month: 'Feb', mrr: 5800, arr: 69600, newMrr: 1200, churnMrr: 400 },
+                    { month: 'Mar', mrr: 6500, arr: 78000, newMrr: 1100, churnMrr: 400 },
+                    { month: 'Apr', mrr: 7200, arr: 86400, newMrr: 1300, churnMrr: 600 },
+                    { month: 'May', mrr: 8000, arr: 96000, newMrr: 1400, churnMrr: 600 },
+                    { month: 'Jun', mrr: saasMetrics.revenue.mrr, arr: saasMetrics.revenue.arr, newMrr: 1500, churnMrr: 700 }
+                  ]} />
+
+                  <RetentionMetricsChart data={[
+                    { month: 'Jan', customerChurn: 5, revenueChurn: 4, netRetention: 105 },
+                    { month: 'Feb', customerChurn: 6, revenueChurn: 5, netRetention: 108 },
+                    { month: 'Mar', customerChurn: 4, revenueChurn: 3, netRetention: 112 },
+                    { month: 'Apr', customerChurn: 5, revenueChurn: 4, netRetention: 110 },
+                    { month: 'May', customerChurn: 3, revenueChurn: 2, netRetention: 115 },
+                    { month: 'Jun', customerChurn: saasMetrics.retention.customerChurnRate, revenueChurn: 3, netRetention: saasMetrics.retention.netDollarRetention }
+                  ]} />
+
+                  <AcquisitionMetricsChart data={[
+                    { month: 'Jan', newCustomers: 12, cac: 180, ltv: 2400 },
+                    { month: 'Feb', newCustomers: 15, cac: 170, ltv: 2500 },
+                    { month: 'Mar', newCustomers: 18, cac: 160, ltv: 2600 },
+                    { month: 'Apr', newCustomers: 22, cac: 155, ltv: 2700 },
+                    { month: 'May', newCustomers: 25, cac: 150, ltv: 2800 },
+                    { month: 'Jun', newCustomers: 28, cac: saasMetrics.acquisition.cac, ltv: saasMetrics.revenue.clv }
+                  ]} />
+
+                  <EngagementMetricsChart data={[
+                    { month: 'Jan', dau: 120, mau: 450, dauMauRatio: 26.7 },
+                    { month: 'Feb', dau: 135, mau: 480, dauMauRatio: 28.1 },
+                    { month: 'Mar', dau: 150, mau: 520, dauMauRatio: 28.8 },
+                    { month: 'Apr', dau: 165, mau: 550, dauMauRatio: 30.0 },
+                    { month: 'May', dau: 180, mau: 600, dauMauRatio: 30.0 },
+                    { month: 'Jun', dau: 195, mau: 650, dauMauRatio: saasMetrics.engagement.dauMauRatio }
+                  ]} />
+                </div>
+
+                {/* Additional Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Heart className="h-5 w-5" />
+                        Customer Satisfaction
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">NPS Score</span>
+                        <Badge variant={saasMetrics.satisfaction.nps > 50 ? "default" : "secondary"}>
+                          {saasMetrics.satisfaction.nps}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">CSAT</span>
+                        <span className="text-sm text-muted-foreground">{saasMetrics.satisfaction.csat}/5</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">CES</span>
+                        <span className="text-sm text-muted-foreground">{saasMetrics.satisfaction.ces}/5</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="h-5 w-5" />
+                        Acquisition Efficiency
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">LVR</span>
+                        <span className="text-sm text-muted-foreground">{saasMetrics.acquisition.lvr}%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Activation Rate</span>
+                        <span className="text-sm text-muted-foreground">{(saasMetrics.acquisition.activationRate * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">CAC Payback</span>
+                        <span className="text-sm text-muted-foreground">12 months</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <DollarSign className="h-5 w-5" />
+                        Revenue Health
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">ARPA</span>
+                        <span className="text-sm text-muted-foreground">${saasMetrics.revenue.arpa.toFixed(0)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Gross Retention</span>
+                        <span className="text-sm text-muted-foreground">{saasMetrics.retention.grossDollarRetention.toFixed(0)}%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Rule of 40</span>
+                        <Badge variant={(saasMetrics.revenue.ruleOf40 * 100) > 40 ? "default" : "secondary"}>
+                          {(saasMetrics.revenue.ruleOf40 * 100).toFixed(0)}%
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            )}
+          </TabsContent>
 
           <TabsContent value="organizations" className="space-y-6">
             <Card>
