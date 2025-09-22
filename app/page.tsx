@@ -13,46 +13,26 @@ import Link from 'next/link';
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
-  const headersList = headers();
-  const tenantType = headersList.get('x-tenant-type');
-  
-  // Super Admin Dashboard
-  if (tenantType === 'super-admin') {
-    if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
-      redirect('/login');
+
+  // Se o usuário estiver autenticado, redireciona para o dashboard apropriado
+  if (session?.user) {
+    if (session.user.role === 'SUPER_ADMIN') {
+      redirect('/super-admin');
     }
-    return <SuperAdminDashboard />;
+    
+    if (session.user.organizations && session.user.organizations.length > 0) {
+      const firstOrg = session.user.organizations[0];
+      redirect(`/dashboard/${firstOrg.slug || firstOrg.id}`);
+    }
+    
+    // Fallback para usuários autenticados sem organizações
+    redirect('/dashboard');
   }
-  
-  // Organization Dashboard
-  if (tenantType === 'organization') {
-    const subdomain = headersList.get('x-tenant-subdomain');
-    const domain = headersList.get('x-tenant-domain');
-    
-    // Validate organization exists
-    let organization = null;
-    try {
-      organization = await getOrganizationByTenant(subdomain || undefined, domain || undefined);
-    } catch (error) {
-      console.error('Error validating organization:', error);
-    }
-    
-    if (!organization) {
-      redirect('/');
-    }
-    
-    if (!session?.user) {
-      redirect('/login');
-    }
-    
-    return <OrganizationDashboard organization={organization} />;
-  }
-  
+
   // Landing Page for non-authenticated users or main domain
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <ArkivameLogo size="md" />
           <nav className="hidden md:flex items-center space-x-8">
@@ -345,7 +325,7 @@ export default async function HomePage() {
       {/* Tenant Type Debug Info (only in development) */}
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed bottom-4 right-4 bg-muted p-3 rounded-lg text-sm">
-          <div>Tenant: {tenantType || 'landing'}</div>
+          <div>Tenant: landing</div>
           <div>User: {session?.user?.name || 'Not authenticated'}</div>
         </div>
       )}

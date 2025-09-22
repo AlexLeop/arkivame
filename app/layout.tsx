@@ -1,8 +1,8 @@
 
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
-import Providers from '@/components/providers';
-import { Toaster } from '@/components/ui/toaster';
+import ClientProviders from '@/components/providers/client-providers';
+
 import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 
@@ -64,14 +64,13 @@ export default async function RootLayout({
         <meta name="color-scheme" content="light dark" />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased arkivame-scrollbar">
-        <Providers>
+        <ClientProviders>
           <div className="relative flex min-h-screen flex-col">
             <main className="flex-1">
               {children}
             </main>
           </div>
-        </Providers>
-        <Toaster />
+        </ClientProviders>
         
         {/* Background Pattern */}
         <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">

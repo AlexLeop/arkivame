@@ -137,6 +137,21 @@ async function handleAppLogic(request: NextRequest): Promise<NextResponse> {
   }
 
   // Lógica para a landing page e outras rotas públicas
+  // Se o usuário estiver autenticado e tentando acessar a rota raiz, redireciona para o dashboard apropriado.
+  if (pathname === "/") {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    if (token?.sub) {
+      if (token.role === "SUPER_ADMIN") {
+        return NextResponse.redirect(new URL("/super-admin", request.url));
+      }
+      if (token.organizations && token.organizations.length > 0) {
+        return NextResponse.redirect(new URL(`/dashboard/${token.organizations[0].slug || token.organizations[0].id}`, request.url));
+      }
+      // Fallback para usuários autenticados sem organizações ou role específica
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+  }
+
   const response = NextResponse.next();
   response.headers.set("x-tenant-host", host);
   response.headers.set("x-tenant-type", "landing");
