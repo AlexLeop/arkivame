@@ -9,16 +9,31 @@ import { redisConnection } from '@/lib/queues/redis/redis.connection';
 import Stripe from 'stripe';
 
 // Mock dependencies
-jest.mock('@/lib/db', () => ({
-  prisma: {
-    organization: {
-      update: jest.fn(),
+jest.mock('@/lib/db', () => {
+  const mockOrgUpdate = jest.fn();
+  const mockSubUpdate = jest.fn();
+
+  return {
+    prisma: {
+      organization: {
+        update: mockOrgUpdate,
+      },
+      subscription: {
+        update: mockSubUpdate,
+      },
+      $transaction: jest.fn(async (callback) => {
+        return callback({
+          organization: {
+            update: mockOrgUpdate,
+          },
+          subscription: {
+            update: mockSubUpdate, // Do not set mockResolvedValue here
+          },
+        });
+      }),
     },
-    subscription: {
-      update: jest.fn(),
-    },
-  },
-}));
+  };
+});
 
 jest.mock('@/lib/stripe', () => ({
   stripe: {
@@ -33,7 +48,7 @@ jest.mock('@/lib/stripe', () => ({
   }),
 }));
 
-jest.mock('@/lib/queues/redis.connection', () => ({
+jest.mock('@/lib/queues/redis/redis.connection', () => ({
   redisConnection: {
     get: jest.fn(),
     set: jest.fn(),

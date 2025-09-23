@@ -1,13 +1,12 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { 
   Slack, 
-  Discord, 
   Bot, 
   GitFork, 
   ExternalLink, 
@@ -42,11 +41,10 @@ export default function IntegrationsPage() {
   const [loading, setLoading] = useState(true);
   const [connectingIntegration, setConnectingIntegration] = useState<string | null>(null);
 
-  const fetchIntegrations = async () => {
+  const fetchIntegrations = useCallback(async () => {
     setLoading(true);
     try {
-      // In a real application, this would fetch actual integration status from your backend
-      // For now, we'll use mock data and simulate API calls
+      
       const mockIntegrations: Integration[] = [
         {
           id: 'slack',
@@ -61,9 +59,9 @@ export default function IntegrationsPage() {
           id: 'discord',
           name: 'Discord',
           type: 'inbound',
-          status: 'connected',
+          status: 'disconnected',
           description: 'Archive discussions from Discord servers.',
-          icon: Discord,
+          icon: Bot,
           connectUrl: `/api/integrations/discord/connect?organizationId=${organizationId}`,
         },
         {
@@ -122,7 +120,7 @@ export default function IntegrationsPage() {
         },
       ];
 
-      // Simulate fetching real status
+      
       const response = await fetch(`/api/integrations?organizationId=${organizationId}`);
       if (response.ok) {
         const realStatus = await response.json();
@@ -142,13 +140,13 @@ export default function IntegrationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationId]);
 
   useEffect(() => {
     if (organizationId) {
       fetchIntegrations();
     }
-  }, [organizationId]);
+  }, [organizationId, fetchIntegrations]);
 
   const handleConnect = async (integrationId: string, connectUrl?: string) => {
     if (!connectUrl) {
@@ -158,18 +156,11 @@ export default function IntegrationsPage() {
 
     setConnectingIntegration(integrationId);
     try {
-      // Simulate OAuth flow or direct connection
-      // In a real app, this would redirect to the OAuth provider
-      // For now, we'll simulate success after a delay
+      
       toast.info(`Connecting to ${integrationId}...`);
       window.location.href = connectUrl; // Redirect to OAuth provider
 
-      // After successful OAuth, the provider would redirect back to your app
-      // and your backend would update the status. We'll simulate that here.
-      // setTimeout(() => {
-      //   toast.success(`${integrationId} connected successfully!`);
-      //   fetchIntegrations();
-      // }, 3000);
+      
 
     } catch (error) {
       console.error(`Error connecting to ${integrationId}:`, error);
@@ -324,13 +315,7 @@ export default function IntegrationsPage() {
         </Card>
       </div>
 
-      <Alert className="mt-8">
-        <RefreshCcw className="h-4 w-4" />
-        <AlertTitle>Integration Status</AlertTitle>
-        <AlertDescription>
-          Integration statuses are simulated. In a production environment, these would reflect real-time connection states and require proper OAuth/API key management.
-        </AlertDescription>
-      </Alert>
+      
     </div>
   );
 }

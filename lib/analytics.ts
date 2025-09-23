@@ -1,5 +1,5 @@
 
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 import { headers } from 'next/headers';
 
 export interface AnalyticsEventProperties {
@@ -106,7 +106,7 @@ export async function getAnalytics(organizationId: string, period: 'day' | 'week
       },
       select: { userId: true },
       distinct: ['userId']
-    }).then(users => users.length),
+    }).then((users: { userId: string | null }[]) => users.length),
 
     // Recent activity events
     prisma.analyticsEvent.findMany({
@@ -137,11 +137,11 @@ export async function getAnalytics(organizationId: string, period: 'day' | 'week
     totalKnowledge,
     totalSearches,
     totalUsers,
-    recentActivity: recentActivity.reduce((acc, event) => {
+    recentActivity: recentActivity.reduce((acc: Record<string, number>, event: { event: string }) => {
       acc[event.event] = (acc[event.event] || 0) + 1;
       return acc;
     }, {} as Record<string, number>),
-    topSearchTerms: topSearchTerms.map(item => ({
+    topSearchTerms: topSearchTerms.map((item: { query: string; _count: { query: number } }) => ({
       query: item.query,
       count: item._count.query
     })),

@@ -20,7 +20,7 @@ interface LimitWarningEmailProps {
   upgradeLink: string;
 }
 
-const baseUrl = process.env.NEXTAUTH_URL ? `https://${process.env.NEXTAUTH_URL}` : '';
+const baseUrl = process.env.NEXTAUTH_URL || '';
 
 export const LimitWarningEmail = ({
   organizationName,

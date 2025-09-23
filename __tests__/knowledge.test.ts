@@ -1,8 +1,20 @@
 import { createKnowledgeItem } from '../lib/knowledge';
 import { prisma } from '@/lib/db';
-import { generateSummary, generateEmbedding } from '@/lib/openai';
 import logger from '@/lib/logger';
 import { SourceType } from '@prisma/client';
+
+// Mock the entire @/lib/openai module at the top level
+jest.mock('@/lib/openai', () => ({
+  __esModule: true,
+  generateSummary: jest.fn(),
+  generateEmbedding: jest.fn(),
+  extractActionItems: jest.fn(),
+  // Add other functions if they exist in lib/openai and are used by lib/knowledge
+}));
+
+// Now, import the mocked functions from the mocked @/lib/openai module
+// These will be the jest.fn() instances defined in the mock above.
+const { generateSummary, generateEmbedding, extractActionItems } = require('@/lib/openai');
 
 // Mock dependencies
 jest.mock('@/lib/db', () => ({
@@ -14,12 +26,16 @@ jest.mock('@/lib/db', () => ({
   },
 }));
 
-jest.mock('@/lib/openai', () => ({
-  generateSummary: jest.fn(),
-  generateEmbedding: jest.fn(),
-}));
 
-jest.mock('@/lib/logger');
+
+jest.mock('@/lib/logger', () => ({
+  __esModule: true, // This is important for mocking ES modules
+  default: {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(), // Add info as well, just in case
+  },
+}));
 
 const mockedPrismaCreate = prisma.knowledgeItem.create as jest.Mock;
 const mockedPrismaExecuteRaw = prisma.$executeRaw as jest.Mock;

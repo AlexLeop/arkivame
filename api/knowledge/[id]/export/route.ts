@@ -7,6 +7,25 @@ import { decrypt } from '@/lib/encryption';
 import { NotionOutputIntegration } from '@/lib/integrations/notion-output';
 import { ConfluenceOutputIntegration } from '@/lib/integrations/confluence-output';
 
+// Definindo o tipo baseado no schema do Prisma
+type IntegrationType = 
+  | 'SLACK'
+  | 'TEAMS'
+  | 'NOTION'
+  | 'DISCORD'
+  | 'GOOGLE_CHAT'
+  | 'MATTERMOST'
+  | 'ROCKET_CHAT'
+  | 'ZULIP'
+  | 'TELEGRAM'
+  | 'NOTION_OUT'
+  | 'CONFLUENCE'
+  | 'CODA'
+  | 'CLICKUP_DOCS'
+  | 'GOOGLE_DOCS'
+  | 'DROPBOX_PAPER'
+  | 'GURU';
+
 interface RouteParams {
   params: { id: string };
 }
@@ -50,17 +69,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get integration configuration
-    const integrationMapping: Record<string, string> = {
+    const integrationMapping: Record<string, IntegrationType> = {
       'notion': 'NOTION_OUT',
       'confluence': 'CONFLUENCE',
       'coda': 'CODA',
       'clickup': 'CLICKUP_DOCS',
       'google-docs': 'GOOGLE_DOCS',
       'dropbox-paper': 'DROPBOX_PAPER',
-      'guru': 'GURU',
-      'bookstack': 'BOOKSTACK',
-      'github-wiki': 'GITHUB_WIKI'
-    };
+      'guru': 'GURU'
+    } as const;
 
     const integrationType = integrationMapping[platform];
     if (!integrationType) {
@@ -82,14 +99,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Decrypt credentials
-    const credentials = Object.entries(integration.credentials).reduce((acc, [key, value]) => {
-      acc[key] = decrypt(value);
+    const credentials = Object.entries(integration.credentials as Record<string, unknown>).reduce((acc, [key, value]) => {
+      if (typeof value === 'string') {
+        acc[key] = decrypt(value);
+      }
       return acc;
     }, {} as Record<string, string>);
 
     // Export knowledge
     let result;
-    const tags = knowledge.tags.map(ta => ta.tag.name);
+    const tags = knowledge.tags.map((ta: { tag: { name: string } }) => ta.tag.name);
 
     switch (integrationType) {
       case 'NOTION_OUT': {

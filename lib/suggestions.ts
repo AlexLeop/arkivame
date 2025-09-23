@@ -16,8 +16,12 @@ export type SuggestedItem = {
   similarity: number;
 };
 
-const SIMILARITY_THRESHOLD = 0.75; // Limiar de similaridade (cosseno)
-const MAX_RESULTS = 3; // Máximo de resultados a serem retornados
+// Limiar de similaridade (cosseno). Pode ser ajustado via variável de ambiente.
+const SIMILARITY_THRESHOLD = process.env.SUGGESTION_SIMILARITY_THRESHOLD
+  ? parseFloat(process.env.SUGGESTION_SIMILARITY_THRESHOLD)
+  : 0.75;
+// Máximo de resultados a serem retornados. Pode ser ajustado via variável de ambiente.
+const MAX_RESULTS = process.env.SUGGESTION_MAX_RESULTS ? parseInt(process.env.SUGGESTION_MAX_RESULTS, 10) : 3;
 
 /**
  * Encontra itens arquivados relevantes para uma nova mensagem com base na similaridade semântica.

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
 export async function GET() {
@@ -32,7 +32,6 @@ export async function GET() {
     const [
       totalUsers,
       totalKnowledgeItems,
-      totalStorage,
       recentKnowledgeItems,
       weeklyKnowledgeItems
     ] = await Promise.all([
@@ -49,13 +48,6 @@ export async function GET() {
       prisma.knowledgeItem.count({
         where: { organizationId }
       }),
-      
-      // Calculate total storage (simplified - sum of content length)
-      prisma.knowledgeItem.aggregate({
-        where: { organizationId },
-        _sum: { content: true }
-      }),
-      
       // Count knowledge items from last 30 days
       prisma.knowledgeItem.count({
         where: {
@@ -73,8 +65,8 @@ export async function GET() {
       })
     ]);
 
-    // Calculate storage in GB (simplified calculation)
-    const storageGB = (totalStorage._sum.content || 0) / (1024 * 1024 * 1024);
+    // Calculate storage in GB (simplified calculation, assuming 0.1MB per item)
+    const storageGB = (totalKnowledgeItems * 0.1) / 1024;
 
     // Calculate growth percentages (simplified)
     const itemsGrowth = totalKnowledgeItems > 0 ? 
@@ -109,13 +101,13 @@ export async function GET() {
     // Fetch top content by views
     const topContent = await prisma.knowledgeItem.findMany({
       where: { organizationId },
-      orderBy: { views: 'desc' },
+      orderBy: { viewCount: 'desc' },
       take: 5,
       select: {
         id: true,
         title: true,
-        views: true,
-        source: true,
+        viewCount: true,
+        sourceType: true,
         createdAt: true
       }
     });
@@ -165,16 +157,21 @@ export async function GET() {
         monthly: monthlyTrends
       },
       activity: {
-        topUsers: topUsers.map(user => ({
+        topUsers: topUsers.map((user: { name: string | null; email: string; _count: { knowledgeItems: number } }) => ({
           name: user.name || 'Unknown User',
           email: user.email,
           items: user._count.knowledgeItems,
           views: 0 // Placeholder - would need view tracking per user
         })),
-        topContent: topContent.map(item => ({
+        topContent: topContent.map((item: {
+          title: string;
+          viewCount: number;
+          sourceType: string;
+          createdAt: Date;
+        }) => ({
           title: item.title,
-          views: item.views,
-          source: item.source,
+          views: item.viewCount,
+          source: item.sourceType,
           createdAt: item.createdAt.toISOString().split('T')[0]
         })),
         integrations: [
@@ -196,4 +193,3 @@ export async function GET() {
     );
   }
 }
-

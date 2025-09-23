@@ -90,95 +90,69 @@ export default function SubscriptionPage() {
   const fetchSubscriptionData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch real subscription data from API
       const response = await fetch('/api/subscription');
-      
       if (response.ok) {
         const data = await response.json();
         setSubscriptionData(data);
       } else {
-        console.error('Failed to fetch subscription data:', response.statusText);
-        
-        // Fallback to default data structure
-        setSubscriptionData({
-          plan: PLANS.starter,
-          status: 'active',
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          cancelAtPeriodEnd: false,
-          usage: {
-            users: { current: 0, limit: 5 },
-            storage: { current: 0, limit: 1 },
-            knowledgeItems: { current: 0, limit: 100 }
-          }
-        });
+        toast.error('Falha ao carregar os dados da assinatura.');
       }
     } catch (error) {
       console.error('Error fetching subscription data:', error);
       toast.error('Erro ao carregar dados da assinatura');
-      
-      // Set default data on error
-      setSubscriptionData({
-        plan: PLANS.starter,
-        status: 'active',
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        cancelAtPeriodEnd: false,
-        usage: {
-          users: { current: 0, limit: 5 },
-          storage: { current: 0, limit: 1 },
-          knowledgeItems: { current: 0, limit: 100 }
-        }
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePlanChange = async (newPlan: keyof typeof PLANS) => {
+  const handleSubscriptionAction = async (action: string, payload?: any) => {
     setActionLoading(true);
     try {
-      // In a real app, this would call the Stripe API
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-      
-      toast.success(`Plano alterado para ${PLANS[newPlan].name} com sucesso!`);
-      await fetchSubscriptionData();
+      const response = await fetch('/api/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.portalUrl) {
+          window.location.href = data.portalUrl;
+        } else if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+        } else {
+          await fetchSubscriptionData();
+        }
+        return true;
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Ocorreu um erro.');
+        return false;
+      }
     } catch (error) {
-      console.error('Error changing plan:', error);
-      toast.error('Erro ao alterar plano');
+      console.error(`Error with action ${action}:`, error);
+      toast.error('Ocorreu um erro de rede.');
+      return false;
     } finally {
       setActionLoading(false);
     }
   };
 
+  const handlePlanChange = async (newPlan: keyof typeof PLANS) => {
+    await handleSubscriptionAction('change_plan', { plan: newPlan });
+  };
+
   const handleCancelSubscription = async () => {
-    setActionLoading(true);
-    try {
-      // In a real app, this would call the Stripe API
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-      
+    const success = await handleSubscriptionAction('cancel');
+    if (success) {
       toast.success('Assinatura cancelada. Continuará ativa até o final do período atual.');
-      await fetchSubscriptionData();
-    } catch (error) {
-      console.error('Error canceling subscription:', error);
-      toast.error('Erro ao cancelar assinatura');
-    } finally {
-      setActionLoading(false);
     }
   };
 
   const handleReactivateSubscription = async () => {
-    setActionLoading(true);
-    try {
-      // In a real app, this would call the Stripe API
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-      
+    const success = await handleSubscriptionAction('reactivate');
+    if (success) {
       toast.success('Assinatura reativada com sucesso!');
-      await fetchSubscriptionData();
-    } catch (error) {
-      console.error('Error reactivating subscription:', error);
-      toast.error('Erro ao reativar assinatura');
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -190,7 +164,7 @@ export default function SubscriptionPage() {
       trialing: { label: 'Período de Teste', variant: 'secondary' as const, icon: CheckCircle }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig];
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.canceled;
     const Icon = config.icon;
 
     return (
@@ -210,6 +184,7 @@ export default function SubscriptionPage() {
   };
 
   const getUsagePercentage = (current: number, limit: number) => {
+    if (limit === 0) return 0;
     return Math.min((current / limit) * 100, 100);
   };
 
@@ -231,7 +206,7 @@ export default function SubscriptionPage() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
-              Erro ao carregar dados da assinatura
+              Não foi possível carregar os dados da sua assinatura.
             </p>
           </CardContent>
         </Card>
@@ -423,4 +398,3 @@ export default function SubscriptionPage() {
     </div>
   );
 }
-

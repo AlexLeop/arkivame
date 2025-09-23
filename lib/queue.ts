@@ -1,20 +1,18 @@
 import { Queue } from 'bullmq';
-import { Redis } from '@upstash/redis';
+import IORedis from 'ioredis';
 import logger from '@/lib/logger';
 
-const { UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN } = process.env;
-
-// Reutiliza a lógica de conexão Redis do rate-limit
+// BullMQ requer uma conexão Redis padrão (não a API REST do Upstash)
 const connection =
-  UPSTASH_REDIS_REST_URL && UPSTASH_REDIS_REST_TOKEN
-    ? new Redis({
-        url: UPSTASH_REDIS_REST_URL,
-        token: UPSTASH_REDIS_REST_TOKEN,
+  process.env.REDIS_URL
+    ? new IORedis(process.env.REDIS_URL, {
+        // BullMQ recomenda esta configuração para evitar novas tentativas em conexões instáveis
+        maxRetriesPerRequest: null,
       })
     : null;
 
 if (!connection) {
-  logger.warn('Queue system is disabled. UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are not configured.');
+  logger.warn('Queue system is disabled. REDIS_URL is not configured.');
 }
 
 // Define a estrutura de dados do trabalho de arquivamento
@@ -51,6 +49,9 @@ type LimitWarningPayload = {
   upgradeLink: string;
 };
 
+type KnowledgeJobName = 'archive-slack-thread' | 'archive-discord-thread';
+type EmailJobName = 'send-email';
+
 // Discriminated union for type-safe email job data
 export type EmailJobData =
   | {
@@ -65,19 +66,19 @@ export type EmailJobData =
     };
 
 // Cria e exporta a fila de arquivamento
-export const knowledgeQueue = connection
-  ? new Queue<KnowledgeArchivalJobData>('knowledge-archival', { connection })
+export const knowledgeQueue = connection ?
+  new Queue<KnowledgeArchivalJobData, any, KnowledgeJobName>('knowledge-archival', { connection })
   : null;
 
 // Cria e exporta a fila de e-mails
 export const emailQueue = connection
-  ? new Queue<EmailJobData>('email-sending', { connection })
+  ? new Queue<EmailJobData, any, EmailJobName>('email-sending', { connection })
   : null;
 
 export async function addKnowledgeArchivalJob(data: KnowledgeArchivalJobData) {
   if (!knowledgeQueue) throw new Error('Fila não inicializada.');
 
-  let jobName: string;
+  let jobName: KnowledgeJobName;
   switch (data.source) {
     case 'SLACK':
       jobName = 'archive-slack-thread';
@@ -86,7 +87,9 @@ export async function addKnowledgeArchivalJob(data: KnowledgeArchivalJobData) {
       jobName = 'archive-discord-thread';
       break;
     default:
-      throw new Error('Fonte de trabalho de arquivamento desconhecida.');
+      // Isso garante que o switch seja exaustivo para os tipos de `data.source`
+      const exhaustiveCheck: never = data;
+      throw new Error(`Fonte de trabalho de arquivamento desconhecida: ${exhaustiveCheck}`);
   }
 
   await knowledgeQueue.add(jobName, data, {

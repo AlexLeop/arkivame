@@ -1,94 +1,61 @@
-
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
-
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
     if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const action = searchParams.get('action') || 'all';
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = parseInt(searchParams.get('limit') || '20', 10);
+    const cursor = searchParams.get('cursor');
+    const actorId = searchParams.get('actorId');
+    const action = searchParams.get('action');
+    const search = searchParams.get('search');
 
-    // Mock audit logs
-    let logs = [
-      {
-        id: '1',
-        action: 'organization_created',
-        actor: 'admin@arkivame.com',
-        target: 'Acme Corporation',
-        targetType: 'organization',
-        metadata: { plan: 'BUSINESS' },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0...',
-        timestamp: '2024-01-15T10:30:00Z'
-      },
-      {
-        id: '2', 
-        action: 'user_login',
-        actor: 'sarah@acme.com',
-        target: 'sarah@acme.com',
-        targetType: 'user',
-        metadata: { success: true },
-        ipAddress: '192.168.1.150',
-        userAgent: 'Mozilla/5.0...',
-        timestamp: '2024-01-15T09:45:00Z'
-      },
-      {
-        id: '3',
-        action: 'knowledge_created',
-        actor: 'mike@techstart.com',
-        target: 'API Security Guidelines',
-        targetType: 'knowledge',
-        metadata: { source: 'MANUAL' },
-        ipAddress: '10.0.1.25',
-        userAgent: 'Mozilla/5.0...',
-        timestamp: '2024-01-15T08:20:00Z'
-      },
-      {
-        id: '4',
-        action: 'organization_deleted',
-        actor: 'admin@arkivame.com',
-        target: 'Old Test Org',
-        targetType: 'organization',
-        metadata: { reason: 'cleanup' },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0...',
-        timestamp: '2024-01-14T16:30:00Z'
-      }
-    ];
+    const where: any = {}; // No organizationId filter for system-wide logs
 
-    // Apply filters
-    if (action !== 'all') {
-      logs = logs.filter(log => log.action === action);
+    if (actorId) {
+      where.userId = actorId;
+    }
+    if (action) {
+      where.action = action;
+    }
+    if (search) {
+      where.message = { contains: search, mode: 'insensitive' };
     }
 
-    // Pagination
-    const paginatedLogs = logs.slice(offset, offset + limit);
-
-    return NextResponse.json({
-      data: paginatedLogs,
-      total: logs.length,
-      limit,
-      offset
+    const logs = await prisma.auditLog.findMany({
+      where,
+      take: limit + 1, // Fetch one more to determine if there's a next page
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { timestamp: 'desc' },
+      include: {
+        user: { select: { id: true, name: true, email: true, image: true } },
+      },
     });
+
+    let nextCursor: string | null = null;
+    if (logs.length > limit) {
+      const lastLog = logs.pop(); // Remove the extra item
+      nextCursor = lastLog!.id;
+    }
+
+    const formattedLogs = logs.map((log) => ({
+      id: log.id,
+      action: log.action,
+      message: log.details ? (log.details as any).message || log.action : log.action,
+      createdAt: log.timestamp.toISOString(),
+      actor: log.user || { id: 'system', name: 'System', email: 'system@example.com', image: null },
+    }));
+
+    return NextResponse.json({ logs: formattedLogs, nextCursor });
   } catch (error) {
-    console.error('Audit logs fetch error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Error fetching super admin audit logs:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -34,29 +34,42 @@ export async function POST(request: NextRequest) {
       return acc;
     }, {} as Record<string, string>);
 
-    // Create or update integration
-    const integration = await prisma.integration.upsert({
+    // Check if integration already exists for this org and type
+    const existingIntegration = await prisma.integration.findFirst({
       where: {
-        organizationId_type: {
-          organizationId,
-          type
-        }
-      },
-      update: {
-        name,
-        credentials: encryptedCredentials,
-        config,
-        isActive: true,
-      },
-      create: {
         organizationId,
-        type,
-        name,
-        credentials: encryptedCredentials,
-        config,
-        isActive: true,
+        type
       }
     });
+
+    let integration;
+    
+    if (existingIntegration) {
+      // Update existing integration
+      integration = await prisma.integration.update({
+        where: {
+          id: existingIntegration.id
+        },
+        data: {
+          name,
+          credentials: encryptedCredentials,
+          config,
+          isActive: true,
+        }
+      });
+    } else {
+      // Create new integration
+      integration = await prisma.integration.create({
+        data: {
+          organizationId,
+          type,
+          name,
+          credentials: encryptedCredentials,
+          config,
+          isActive: true,
+        }
+      });
+    }
 
     // Test the integration
     let testResult = false;

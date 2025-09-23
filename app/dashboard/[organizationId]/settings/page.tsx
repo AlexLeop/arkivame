@@ -1,3 +1,4 @@
+import { ProfileSettings } from '@/components/settings/profile-settings';
 import { ProactiveBotSettings } from '@/components/settings/proactive-bot-settings';
 import { MembersSettings } from '@/components/settings/members-settings';
 import { AuditLogSettings } from '@/components/settings/audit-log-settings';
@@ -31,7 +32,7 @@ export default function SettingsPage({ params }: SettingsPageProps) {
           <TabsTrigger value="audit-log">Audit Log</TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="p-2">
-          <p className="text-muted-foreground">Manage your organization&apos;s profile details.</p>
+          <ProfileSettings organizationId={organizationId} />
         </TabsContent>
         <TabsContent value="proactive-bot">
           <ProactiveBotSettings organizationId={organizationId} />

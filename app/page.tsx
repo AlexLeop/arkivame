@@ -233,7 +233,7 @@ export default async function HomePage() {
               }
             ].map((testimonial, index) => (
               <div key={index} className="p-6 bg-background rounded-lg border shadow-sm">
-                <p className="text-muted-foreground mb-4 italic">"{testimonial.quote}"</p>
+                <p className="text-muted-foreground mb-4 italic">&ldquo;{testimonial.quote}&rdquo;</p>
                 <div className="font-semibold">{testimonial.author}</div>
                 <div className="text-sm text-muted-foreground">{testimonial.role} at {testimonial.company}</div>
               </div>
@@ -246,7 +246,7 @@ export default async function HomePage() {
       <section className="py-20 px-4">
         <div className="container mx-auto text-center max-w-4xl">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Ready to transform your team's knowledge?
+            Ready to transform your team&apos;s knowledge?
           </h2>
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
             Join thousands of teams who have already eliminated knowledge silos and improved collaboration with Arkivame.

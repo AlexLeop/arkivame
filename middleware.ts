@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { validateUserOrgAccess, NotAuthorizedError } from './lib/permissions';
 import logger from './lib/logger';
+// A importação do PrismaClient é necessária para `validateUserOrgAccess`.
 // import crypto from 'crypto';
 
 // Define allowed origins. In production, this should come from a comma-separated environment variable.
@@ -237,7 +238,7 @@ export const config = {
      * - api/integrations/webhook-slack (webhook público)
      * Isso garante que nosso middleware seja executado em páginas e rotas de API protegidas.
      */
-    '/((?!_next/static|_next/image|favicon.ico|api/auth|api/webhooks/stripe|api/integrations/discord).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/auth|api/webhooks/stripe|api/integrations/discord|api/integrations/webhook-slack).*)',
   ],
 };
 
@@ -245,7 +246,3 @@ export const config = {
 // Prisma, which is used in `validateUserOrgAccess`, is not compatible with the
 // Edge runtime.
 export const runtime = 'nodejs';
-
-// @ts-expect-error
-import { PrismaClient } from '@prisma/client';
-

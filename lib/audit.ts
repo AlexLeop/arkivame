@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import logger from '@/lib/logger';
 
@@ -21,7 +21,7 @@ export async function logAudit(
   organizationId: string,
   actorId: string,
   action: AuditLogAction,
-  details?: Prisma.JsonObject
+  details?: any
 ) {
   try {
     await prisma.auditLog.create({

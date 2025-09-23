@@ -1,5 +1,8 @@
+'use client';
+
 import { ReactNode } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ArkivameLogo } from '@/components/ui/arkivame-logo';
 import { Button } from '@/components/ui/button';
 import { CheckoutHandler } from './checkout-handler';
@@ -24,6 +27,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children, params }: DashboardLayoutProps) {
   const { organizationId } = params;
+  const pathname = usePathname();
 
   return (
     <div className="min-h-screen w-full flex bg-muted/30">
@@ -37,17 +41,17 @@ export default function DashboardLayout({ children, params }: DashboardLayoutPro
           
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2">
-            <div className="arkivame-sidebar-item-active">
+            <Link href={`/dashboard/${organizationId}`} className={pathname === `/dashboard/${organizationId}` ? "arkivame-sidebar-item-active" : "arkivame-sidebar-item"}>
               <LayoutDashboard className="h-5 w-5" />
               <span>Dashboard</span>
-            </div>
+            </Link>
             
-            <Link href={`/dashboard/${organizationId}/integrations`} className="arkivame-sidebar-item">
+            <Link href={`/dashboard/${organizationId}/integrations`} className={pathname.startsWith(`/dashboard/${organizationId}/integrations`) ? "arkivame-sidebar-item-active" : "arkivame-sidebar-item"}>
               <Bot className="h-5 w-5" />
               <span>Integrações</span>
             </Link>
             
-            <Link href={`/dashboard/${organizationId}/settings`} className="arkivame-sidebar-item">
+            <Link href={`/dashboard/${organizationId}/settings`} className={pathname.startsWith(`/dashboard/${organizationId}/settings`) ? "arkivame-sidebar-item-active" : "arkivame-sidebar-item"}>
               <Settings className="h-5 w-5" />
               <span>Configurações</span>
             </Link>

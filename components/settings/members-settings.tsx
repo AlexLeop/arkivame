@@ -139,8 +139,7 @@ export function MembersSettings({ organizationId }: MembersSettingsProps) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to send invitation');
       }
-      // toast.success(`Invitation sent to ${data.email}`);
-      alert(`Invitation sent to ${data.email}`);
+      toast.success(`Invitation sent to ${data.email}`);
       form.reset({ email: '' });
       fetchInvites(invitesPage);
     } catch (error: any) {
@@ -165,7 +164,7 @@ export function MembersSettings({ organizationId }: MembersSettingsProps) {
       }
       // Refetch members to reflect the change
       fetchMembers(membersPage);
-      alert('Member removed successfully.');
+      toast.success('Member removed successfully.');
     } catch (error: any) {
       console.error(error);
       setApiError(error.message || 'An unexpected error occurred.');
@@ -189,7 +188,7 @@ export function MembersSettings({ organizationId }: MembersSettingsProps) {
       }
       // Refetch invitations to reflect the change
       fetchInvites(invitesPage);
-      alert('Invitation revoked successfully.');
+      toast.success('Invitation revoked successfully.');
     } catch (error: any) {
       console.error(error);
       setApiError(error.message || 'An unexpected error occurred.');
@@ -210,8 +209,7 @@ export function MembersSettings({ organizationId }: MembersSettingsProps) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to resend invitation');
       }
-      // toast.success(`Invitation resent to ${invite.email}`);
-      alert(`Invitation resent to ${invite.email}`);
+      toast.success(`Invitation resent to ${invite.email}`);
     } catch (error: any) {
       console.error(error);
       setApiError(error.message || 'An unexpected error occurred.');
@@ -236,8 +234,7 @@ export function MembersSettings({ organizationId }: MembersSettingsProps) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to change role');
       }
-      // toast.success("Member&apos;s role updated.");
-      // toast.success("Member's role updated.");
+      toast.success("Member's role updated.");
     } catch (error: any) {
       // Revert optimistic update on failure
       setMembers(originalMembers);
@@ -251,7 +248,7 @@ export function MembersSettings({ organizationId }: MembersSettingsProps) {
     <Card className="max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle>Members</CardTitle>
-        <CardDescription>Invite and manage your organization's members.</CardDescription>
+        <CardDescription>Invite and manage your organization&apos;s members.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
         {apiError && (

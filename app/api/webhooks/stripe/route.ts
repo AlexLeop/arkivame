@@ -3,13 +3,24 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import logger from '@/lib/logger';
 import { stripe } from '@/lib/stripe';
-import { stripeWebhookQueue } from '@/lib/queues/stripe.queue';
+import { stripeQueue } from '@/lib/queues/stripe.queue';
 import { Ratelimit } from '@upstash/ratelimit';
-import { redisConnection } from '@/lib/queues/redis/redis.connection';
+import { Redis } from 'ioredis';
+
+// Initialize Redis connection for rate limiting
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 // Initialize rate limiter: 20 requests from the same IP in 10 seconds.
 const ratelimit = new Ratelimit({
-  redis: redisConnection,
+  redis: {
+    // @ts-ignore - Upstash Redis expects a different interface than ioredis
+    set: (key: string, value: string, opts: any) => redis.set(key, value, 'EX', opts.ex), 
+    // @ts-ignore - Upstash Redis expects a different interface than ioredis
+    eval: async <T = any>(script: string, keys: string[], args: any[]): Promise<T> => {
+      const result = await redis.eval(script, keys.length, ...keys, ...args);
+      return result as T;
+    },
+  },
   limiter: Ratelimit.slidingWindow(20, '10 s'),
   analytics: true,
   prefix: '@arkivame/ratelimit',
@@ -53,7 +64,7 @@ export async function POST(req: Request) {
 
   // Em vez de processar, adiciona o evento à fila para processamento assíncrono
   try {
-    await stripeWebhookQueue.add(event.type, { event });
+    await stripeQueue.add(event.type, { event });
     logger.info({ eventType: event.type }, 'Stripe event enqueued for processing.');
   } catch (error: any) {
     logger.error({ err: error, eventType: event.type }, 'Failed to enqueue Stripe event.');

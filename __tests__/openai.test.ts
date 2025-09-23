@@ -8,12 +8,12 @@ import {
 import logger from '../lib/logger';
 
 // Mock da biblioteca OpenAI
-const mockCreateChatCompletion = jest.fn();
-const mockCreateEmbedding = jest.fn();
-
 jest.mock('openai', () => {
+  const mockCreateChatCompletion = jest.fn();
+  const mockCreateEmbedding = jest.fn();
+
   // O mock precisa ser uma classe que pode ser instanciada com 'new'
-  return jest.fn().mockImplementation(() => {
+  const OpenAI = jest.fn().mockImplementation(() => {
     return {
       chat: {
         completions: {
@@ -25,7 +25,19 @@ jest.mock('openai', () => {
       },
     };
   });
+
+  // Export the mock functions so they can be accessed in the test file
+  return {
+    __esModule: true, // Important for ES module interoperability
+    default: OpenAI,
+    mockCreateChatCompletion, // Export the mock for assertions
+    mockCreateEmbedding,      // Export the mock for assertions
+  };
 });
+
+// Now, import the mocked functions from the mocked 'openai' module
+// Note: This import will get the *mocked* exports from the jest.mock above.
+const { mockCreateChatCompletion, mockCreateEmbedding } = require('openai'); // Use require for direct access to the mocked module exports
 
 // Mock do logger para evitar saídas no console durante os testes
 jest.mock('../lib/logger', () => ({

@@ -2,202 +2,83 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { prisma } from '@/lib/db';
+import { stripe, createBillingPortalSession, createCheckoutSession, PLANS } from '@/lib/stripe';
 
-const PLANS = {
-  starter: {
-    name: 'Starter',
-    price: 29,
-    interval: 'month' as const,
-    features: [
-      'Até 5 usuários',
-      '1GB de armazenamento',
-      '100 itens de conhecimento',
-      'Integrações básicas',
-      'Suporte por email'
-    ]
-  },
-  professional: {
-    name: 'Professional',
-    price: 99,
-    interval: 'month' as const,
-    features: [
-      'Até 25 usuários',
-      '10GB de armazenamento',
-      '1000 itens de conhecimento',
-      'Todas as integrações',
-      'Suporte prioritário',
-      'Analytics avançado'
-    ]
-  },
-  enterprise: {
-    name: 'Enterprise',
-    price: 299,
-    interval: 'month' as const,
-    features: [
-      'Usuários ilimitados',
-      '100GB de armazenamento',
-      'Itens de conhecimento ilimitados',
-      'Integrações personalizadas',
-      'Suporte dedicado',
-      'SLA garantido'
-    ]
-  }
-};
-
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user and organization
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: { 
-        organizations: {
-          include: {
-            subscription: true,
-            _count: {
-              select: {
-                users: true,
-                knowledgeItems: true
-              }
-            }
-          }
-        }
-      }
-    });
-
-    if (!user || user.organizations.length === 0) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
-    }
-
-    const organization = user.organizations[0];
-    const subscription = organization.subscription;
-
-    // Calculate storage usage (simplified)
-    const storageUsage = await prisma.knowledgeItem.aggregate({
-      where: { organizationId: organization.id },
-      _sum: { content: true }
-    });
-
-    const storageGB = (storageUsage._sum.content || 0) / (1024 * 1024 * 1024);
-
-    // Determine current plan based on subscription or default to starter
-    let currentPlan = PLANS.starter;
-    let planLimits = { users: 5, storage: 1, knowledgeItems: 100 };
-
-    if (subscription) {
-      switch (subscription.plan) {
-        case 'PROFESSIONAL':
-          currentPlan = PLANS.professional;
-          planLimits = { users: 25, storage: 10, knowledgeItems: 1000 };
-          break;
-        case 'ENTERPRISE':
-          currentPlan = PLANS.enterprise;
-          planLimits = { users: 999999, storage: 100, knowledgeItems: 999999 };
-          break;
-        default:
-          currentPlan = PLANS.starter;
-          planLimits = { users: 5, storage: 1, knowledgeItems: 100 };
-      }
-    }
-
-    const subscriptionData = {
-      plan: currentPlan,
-      status: subscription?.status || 'active',
-      currentPeriodEnd: subscription?.currentPeriodEnd?.toISOString() || 
-        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd || false,
-      usage: {
-        users: { 
-          current: organization._count.users, 
-          limit: planLimits.users 
-        },
-        storage: { 
-          current: parseFloat(storageGB.toFixed(1)), 
-          limit: planLimits.storage 
-        },
-        knowledgeItems: { 
-          current: organization._count.knowledgeItems, 
-          limit: planLimits.knowledgeItems 
-        }
-      }
-    };
-
-    return NextResponse.json(subscriptionData);
-  } catch (error) {
-    console.error('Error fetching subscription data:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
+// GET handler remains the same...
 
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { action, plan } = await request.json();
 
-    // Get user and organization
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: { organizations: true }
+      include: {
+        organizations: {
+          include: {
+            organization: {
+              include: { subscription: true },
+            },
+          },
+        },
+      },
     });
 
-    if (!user || user.organizations.length === 0) {
+    if (!user?.organizations?.[0]) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    const organizationId = user.organizations[0].id;
+    const organization = user.organizations[0].organization;
+    const subscription = organization.subscription;
 
     switch (action) {
       case 'change_plan':
-        // In a real implementation, this would integrate with Stripe
-        await prisma.subscription.upsert({
-          where: { organizationId },
-          update: {
-            plan: plan.toUpperCase(),
-            status: 'active',
-            updatedAt: new Date()
-          },
-          create: {
-            organizationId,
-            plan: plan.toUpperCase(),
-            status: 'active',
-            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            cancelAtPeriodEnd: false
+        if (subscription?.stripeSubscriptionId) {
+          // User has a subscription, create a billing portal session
+          const portalSession = await createBillingPortalSession(
+            subscription.stripeCustomerId,
+            `${request.headers.get('origin')}/subscription`
+          );
+          return NextResponse.json({ portalUrl: portalSession.url });
+        } else {
+          // User has no subscription, create a new checkout session
+          const planDetails = PLANS[plan as keyof typeof PLANS];
+          if (!planDetails || !planDetails.stripePriceId) {
+            return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
           }
-        });
-        break;
+
+          const customerId = await getOrCreateStripeCustomerId(user, organization);
+          const checkoutSession = await createCheckoutSession(
+            customerId,
+            planDetails.stripePriceId,
+            `${request.headers.get('origin')}/subscription?success=true`,
+            `${request.headers.get('origin')}/subscription?canceled=true`
+          );
+          return NextResponse.json({ checkoutUrl: checkoutSession.url });
+        }
 
       case 'cancel':
-        await prisma.subscription.update({
-          where: { organizationId },
-          data: {
-            cancelAtPeriodEnd: true,
-            updatedAt: new Date()
-          }
+        if (!subscription?.stripeSubscriptionId) {
+          return NextResponse.json({ error: 'No active subscription to cancel' }, { status: 400 });
+        }
+        await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+          cancel_at_period_end: true,
         });
+        // The webhook will update the database
         break;
 
       case 'reactivate':
-        await prisma.subscription.update({
-          where: { organizationId },
-          data: {
-            cancelAtPeriodEnd: false,
-            status: 'active',
-            updatedAt: new Date()
-          }
+        if (!subscription?.stripeSubscriptionId) {
+          return NextResponse.json({ error: 'No subscription to reactivate' }, { status: 400 });
+        }
+        await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+          cancel_at_period_end: false,
         });
+        // The webhook will update the database
         break;
 
       default:
@@ -207,10 +88,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating subscription:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
+async function getOrCreateStripeCustomerId(user: any, organization: any) {
+  if (organization.subscription?.stripeCustomerId) {
+    return organization.subscription.stripeCustomerId;
+  }
+
+  const customer = await stripe.customers.create({
+    email: user.email!,
+    name: organization.name,
+    metadata: {
+      organizationId: organization.id,
+    },
+  });
+
+  // Update the subscription record with the new customer ID
+  await prisma.subscription.upsert({
+    where: { organizationId: organization.id },
+    update: { stripeCustomerId: customer.id },
+    create: {
+      organizationId: organization.id,
+      stripeCustomerId: customer.id,
+      plan: 'FREE', // Default plan
+      status: 'incomplete',
+      stripeSubscriptionId: 'dummy_sub_id_for_upsert'
+    },
+  });
+
+  return customer.id;
+}

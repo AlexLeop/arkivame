@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-// import { toast } from 'sonner'; // Descomente se estiver usando sonner para notificações
+import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 // Schema Zod para validação do formulário no frontend
@@ -86,12 +86,10 @@ export function ProactiveBotSettings({ organizationId }: ProactiveBotSettingsPro
         throw new Error(errorData.error || 'Failed to save settings');
       }
 
-      // toast.success('Settings saved successfully!');
-      alert('Settings saved successfully!'); // Placeholder for toast
+      toast.success('Settings saved successfully!');
     } catch (error: any) {
       console.error(error);
-      // toast.error(error.message || 'An unexpected error occurred.');
-      alert(`Error: ${error.message}`); // Placeholder for toast
+      toast.error(error.message || 'An unexpected error occurred.');
     } finally {
       setIsSaving(false);
     }

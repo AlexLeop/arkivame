@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -60,13 +60,7 @@ export function KnowledgeDetailModal({ isOpen, onClose, itemId }: KnowledgeDetai
   const [loading, setLoading] = useState(false);
   const [bookmarking, setBookmarking] = useState(false);
 
-  useEffect(() => {
-    if (isOpen && itemId) {
-      fetchKnowledgeItem();
-    }
-  }, [isOpen, itemId]);
-
-  const fetchKnowledgeItem = async () => {
+  const fetchKnowledgeItem = useCallback(async () => {
     if (!itemId) return;
     
     try {
@@ -87,7 +81,13 @@ export function KnowledgeDetailModal({ isOpen, onClose, itemId }: KnowledgeDetai
     } finally {
       setLoading(false);
     }
-  };
+  }, [itemId]);
+
+  useEffect(() => {
+    if (isOpen && itemId) {
+      fetchKnowledgeItem();
+    }
+  }, [isOpen, itemId, fetchKnowledgeItem]);
 
   const handleBookmark = async () => {
     if (!item) return;

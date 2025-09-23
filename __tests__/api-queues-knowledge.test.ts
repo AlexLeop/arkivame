@@ -13,7 +13,14 @@ jest.mock('@/lib/db', () => ({
     account: { findUnique: jest.fn() },
   },
 }));
-jest.mock('@/lib/logger');
+jest.mock('@/lib/logger', () => ({
+  __esModule: true, // This is important for mocking ES modules
+  default: {
+    warn: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(), // Add info as well, just in case
+  },
+}));
 
 const mockedCreateKnowledgeItem = createKnowledgeItem as jest.Mock;
 const mockedGetSlackThreadMessages = getSlackThreadMessages as jest.Mock;

@@ -1,61 +1,37 @@
-
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
     if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Mock analytics data
-    const analytics = {
-      overview: {
-        totalOrganizations: 12,
-        activeUsers: 247,
-        totalKnowledge: 1456,
-        monthlyGrowth: 18.5
-      },
-      growth: [
-        { month: 'Jan', count: 8 },
-        { month: 'Feb', count: 9 },
-        { month: 'Mar', count: 10 },
-        { month: 'Apr', count: 11 },
-        { month: 'May', count: 11 },
-        { month: 'Jun', count: 12 }
-      ],
-      planDistribution: {
-        FREE: 3,
-        STARTER: 5,
-        BUSINESS: 3,
-        ENTERPRISE: 1
-      },
-      userActivity: [
-        { date: '2024-01-15', activeUsers: 89 },
-        { date: '2024-01-14', activeUsers: 76 },
-        { date: '2024-01-13', activeUsers: 92 },
-        { date: '2024-01-12', activeUsers: 85 },
-        { date: '2024-01-11', activeUsers: 78 }
-      ],
-      topOrganizations: [
-        { name: 'Global Solutions', userCount: 150, knowledgeCount: 891 },
-        { name: 'Acme Corporation', userCount: 25, knowledgeCount: 142 },
-        { name: 'TechStart Inc', userCount: 8, knowledgeCount: 67 }
-      ]
+    const totalOrganizations = await prisma.organization.count();
+    const activeUsers = await prisma.user.count({ where: { isActive: true } });
+    const totalKnowledge = await prisma.knowledgeItem.count();
+
+    // Calculate monthly growth (example: new organizations in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const newOrganizationsLastMonth = await prisma.organization.count({
+      where: { createdAt: { gte: thirtyDaysAgo } },
+    });
+    const monthlyGrowth = totalOrganizations > 0 ? (newOrganizationsLastMonth / totalOrganizations) * 100 : 0;
+
+    const overview = {
+      totalOrganizations,
+      activeUsers,
+      totalKnowledge,
+      monthlyGrowth: parseFloat(monthlyGrowth.toFixed(2)),
     };
 
-    return NextResponse.json(analytics);
+    return NextResponse.json({ overview });
   } catch (error) {
-    console.error('Analytics fetch error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Error fetching super admin analytics:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

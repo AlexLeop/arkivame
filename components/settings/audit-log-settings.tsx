@@ -93,7 +93,7 @@ export function AuditLogSettings({ organizationId }: AuditLogSettingsProps) {
       setNextCursor(data.nextCursor || null);
     } catch (error) {
       console.error(error);
-      // toast.error('Could not load audit logs.');
+      toast.error('Could not load audit logs.');
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);

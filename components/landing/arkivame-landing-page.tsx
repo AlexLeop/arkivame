@@ -308,7 +308,7 @@ export function ArkivameLandingPage() {
           <div className="max-w-4xl mx-auto">
             <div className="arkivame-card p-8 text-center">
               <blockquote className="text-xl md:text-2xl font-medium mb-6 italic">
-                "{testimonials[activeTestimonial].quote}"
+                &ldquo;{testimonials[activeTestimonial].quote}&rdquo;
               </blockquote>
               <div className="flex items-center justify-center space-x-4">
                 <div className="text-center">

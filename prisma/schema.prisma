@@ -1,14 +1,14 @@
 generator client {
-    provider        = "prisma-client-js"
-    output          = "../node_modules/.prisma/client"
-    binaryTargets   = ["native", "linux-musl-arm64-openssl-3.0.x"]
-    previewFeatures = ["postgresqlExtensions"]
+  provider        = "prisma-client-js"
+  output          = "../node_modules/.prisma/client"
+  binaryTargets   = ["native", "linux-musl-arm64-openssl-3.0.x"]
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-    provider   = "postgresql"
-    url        = env("DATABASE_URL")
-    extensions = [vector]
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 // ================================
@@ -16,18 +16,18 @@ datasource db {
 // ================================
 
 model Organization {
-  id            String   @id @default(cuid())
-  name          String
-  slug          String   @unique // For subdomain/routing
-  subdomain     String?  @unique
-  domain        String?  @unique
-  plan          Plan     @default(STARTER)
-  planLimits    Json     @default("{}")
-  settings      Json     @default("{}")
-  status        OrgStatus @default(ACTIVE)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  id         String    @id @default(cuid())
+  name       String
+  slug       String    @unique // For subdomain/routing
+  subdomain  String?   @unique
+  domain     String?   @unique
+  plan       Plan      @default(STARTER)
+  planLimits Json      @default("{}")
+  settings   Json      @default("{}")
+  status     OrgStatus @default(ACTIVE)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
   // Relationships
   users         OrganizationUser[]
   knowledgeBase KnowledgeItem[]
@@ -35,35 +35,36 @@ model Organization {
   integrations  Integration[]
   auditLogs     AuditLog[]
   subscription  Subscription?
-  
+  invitations   Invitation[]
+
   @@map("organizations")
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String?
-  firstName     String?
-  lastName      String?
-  password      String
-  role          GlobalRole @default(USER)
-  isActive      Boolean  @default(true)
-  lastLoginAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  id          String     @id @default(cuid())
+  email       String     @unique
+  name        String?
+  firstName   String?
+  lastName    String?
+  password    String
+  role        GlobalRole @default(USER)
+  isActive    Boolean    @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
   // Multitenant relationships
   organizations OrganizationUser[]
-  
+
   // Activity tracking
-  createdKnowledge KnowledgeItem[] @relation("KnowledgeCreator")
+  createdKnowledge  KnowledgeItem[] @relation("KnowledgeCreator")
   archivedKnowledge KnowledgeItem[] @relation("KnowledgeArchiver")
-  auditLogs        AuditLog[]
-  
+  auditLogs         AuditLog[]
+
   // Next-Auth
   accounts Account[]
   sessions Session[]
-  
+
   @@map("users")
 }
 
@@ -75,10 +76,10 @@ model OrganizationUser {
   permissions    Json     @default("[]")
   joinedAt       DateTime @default(now())
   isActive       Boolean  @default(true)
-  
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([organizationId, userId])
   @@map("organization_users")
 }
@@ -88,49 +89,50 @@ model OrganizationUser {
 // ================================
 
 model KnowledgeItem {
-  id               String   @id @default(cuid())
-  organizationId   String   // Multitenant isolation
-  
+  id             String @id @default(cuid())
+  organizationId String // Multitenant isolation
+
   // Core content
-  title            String
-  content          Json     // Array of message objects from thread
-  summary          String?  // AI-generated summary
-  embedding        Unsupported("vector(1536)")?
-  threadId         String?  // Original Slack/Teams thread ID
-  channelId        String?
-  channelName      String?
-  
+  title       String
+  content     Json // Array of message objects from thread
+  summary     String? // AI-generated summary
+  actionItems Json? // AI-generated action items
+  embedding   Unsupported("vector(1536)")?
+  threadId    String? // Original Slack/Teams thread ID
+  channelId   String?
+  channelName String?
+
   // Metadata
-  sourceType       SourceType @default(MANUAL)
-  sourceMetadata   Json       @default("{}")
-  
+  sourceType     SourceType @default(MANUAL)
+  sourceMetadata Json       @default("{}")
+
   // Authorship
-  createdById      String
-  archivedById     String?   // User who archived it
-  rootMessageAuthor String?  // Original thread author
-  
+  createdById       String
+  archivedById      String? // User who archived it
+  rootMessageAuthor String? // Original thread author
+
   // Organization & Tags
-  tags             TagAssignment[]
-  
+  tags TagAssignment[]
+
   // Analytics
-  viewCount        Int      @default(0)
-  searchCount      Int      @default(0)
-  lastViewedAt     DateTime?
-  
+  viewCount    Int       @default(0)
+  searchCount  Int       @default(0)
+  lastViewedAt DateTime?
+
   // Status
-  status           ContentStatus @default(PUBLISHED)
-  isPublic         Boolean  @default(false)
-  
+  status   ContentStatus @default(PUBLISHED)
+  isPublic Boolean       @default(false)
+
   // Timestamps
   originalTimestamp DateTime? // When original thread was created
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
   // Relations
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  creator          User         @relation("KnowledgeCreator", fields: [createdById], references: [id])
-  archiver         User?        @relation("KnowledgeArchiver", fields: [archivedById], references: [id])
-  
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator      User         @relation("KnowledgeCreator", fields: [createdById], references: [id])
+  archiver     User?        @relation("KnowledgeArchiver", fields: [archivedById], references: [id])
+
   @@index([organizationId, status])
   @@index([organizationId, createdAt])
   @@index([createdById])
@@ -143,39 +145,39 @@ model KnowledgeItem {
 // ================================
 
 model Tag {
-  id             String   @id @default(cuid())
-  organizationId String   // Multitenant isolation
-  
+  id             String @id @default(cuid())
+  organizationId String // Multitenant isolation
+
   // Hierarchical structure
-  name           String
-  slug           String
-  description    String?
-  color          String   @default("#2ED9C3")
-  icon           String?
-  
+  name        String
+  slug        String
+  description String?
+  color       String  @default("#2ED9C3")
+  icon        String?
+
   // Hierarchy
-  parentId       String?
-  level          Int      @default(0)
-  path           String   @default("") // For efficient hierarchy queries
-  
+  parentId String?
+  level    Int     @default(0)
+  path     String  @default("") // For efficient hierarchy queries
+
   // Auto-suggestion & intelligence
-  isAutoSuggested Boolean  @default(false)
-  usageCount      Int      @default(0)
-  
+  isAutoSuggested Boolean @default(false)
+  usageCount      Int     @default(0)
+
   // Settings
-  isActive        Boolean  @default(true)
-  isSystem        Boolean  @default(false)
-  
+  isActive Boolean @default(true)
+  isSystem Boolean @default(false)
+
   // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  parent          Tag?            @relation("TagHierarchy", fields: [parentId], references: [id])
-  children        Tag[]           @relation("TagHierarchy")
-  assignments     TagAssignment[]
-  
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       Tag?            @relation("TagHierarchy", fields: [parentId], references: [id])
+  children     Tag[]           @relation("TagHierarchy")
+  assignments  TagAssignment[]
+
   @@unique([organizationId, slug])
   @@index([organizationId, parentId])
   @@map("tags")
@@ -186,13 +188,13 @@ model TagAssignment {
   knowledgeItemId String
   tagId           String
   assignedAt      DateTime @default(now())
-  assignedBy      String   // User ID who assigned
+  assignedBy      String // User ID who assigned
   isAutoAssigned  Boolean  @default(false)
-  confidence      Float?   // For AI auto-assignment
-  
-  knowledgeItem   KnowledgeItem @relation(fields: [knowledgeItemId], references: [id], onDelete: Cascade)
-  tag             Tag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  
+  confidence      Float? // For AI auto-assignment
+
+  knowledgeItem KnowledgeItem @relation(fields: [knowledgeItemId], references: [id], onDelete: Cascade)
+  tag           Tag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
   @@unique([knowledgeItemId, tagId])
   @@map("tag_assignments")
 }
@@ -202,22 +204,22 @@ model TagAssignment {
 // ================================
 
 model Integration {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   organizationId String
-  
-  type           IntegrationType
-  name           String
-  config         Json     @default("{}") // NOTE: Credentials here must be encrypted in the application layer before saving.
-  credentials    Json     @default("{}")  // Encrypted
-  
-  isActive       Boolean  @default(true)
-  lastSyncAt     DateTime?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
+  type        IntegrationType
+  name        String
+  config      Json            @default("{}") // NOTE: Credentials here must be encrypted in the application layer before saving.
+  credentials Json            @default("{}") // Encrypted
+
+  isActive   Boolean   @default(true)
+  lastSyncAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   @@map("integrations")
 }
 
@@ -226,29 +228,29 @@ model Integration {
 // ================================
 
 model AuditLog {
-  id             String   @id @default(cuid())
-  organizationId String?  // Null for system-wide logs
+  id             String  @id @default(cuid())
+  organizationId String? // Null for system-wide logs
   userId         String?
-  
-  action         String
-  entity         String   // Resource type (user, knowledge, tag, etc)
-  entityId       String?  // Resource ID
-  
+
+  action   String
+  entity   String // Resource type (user, knowledge, tag, etc)
+  entityId String? // Resource ID
+
   // Event details
-  details        Json     @default("{}")
-  ipAddress      String?
-  userAgent      String?
-  
+  details   Json    @default("{}")
+  ipAddress String?
+  userAgent String?
+
   // Context
-  level          LogLevel @default(INFO)
-  source         String   @default("web")
-  
-  timestamp      DateTime @default(now())
-  
+  level  LogLevel @default(INFO)
+  source String   @default("web")
+
+  timestamp DateTime @default(now())
+
   // Relations
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User?         @relation(fields: [userId], references: [id])
-  
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [userId], references: [id])
+
   @@index([organizationId, timestamp])
   @@index([timestamp])
   @@index([userId])
@@ -260,22 +262,22 @@ model AuditLog {
 // ================================
 
 model SavedFilter {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   organizationId String
   userId         String
-  
-  name           String
-  description    String?
-  filterConfig   Json     // Stores filter criteria
-  isPublic       Boolean  @default(false)
-  isDefault      Boolean  @default(false)
-  
-  usageCount     Int      @default(0)
-  lastUsedAt     DateTime?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+
+  name         String
+  description  String?
+  filterConfig Json // Stores filter criteria
+  isPublic     Boolean @default(false)
+  isDefault    Boolean @default(false)
+
+  usageCount Int       @default(0)
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("saved_filters")
 }
 
@@ -284,43 +286,58 @@ model SavedFilter {
 // ================================
 
 model Subscription {
-  id                String   @id @default(cuid())
-  organizationId    String   @unique
-  
-  stripeCustomerId      String   @unique
-  stripeSubscriptionId  String   @unique
-  stripePriceId         String
+  id             String @id @default(cuid())
+  organizationId String @unique
+
+  stripeCustomerId       String   @unique
+  stripeSubscriptionId   String   @unique
+  stripePriceId          String
   stripeCurrentPeriodEnd DateTime
-  
-  plan              Plan
-  status            SubscriptionStatus
-  
-  cancelAtPeriodEnd Boolean  @default(false)
+
+  plan   Plan
+  status SubscriptionStatus
+
+  cancelAtPeriodEnd Boolean   @default(false)
   canceledAt        DateTime?
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   usageNotificationSentAt DateTime?
 
   @@map("subscriptions")
 }
 
+model Invitation {
+  id             String       @id @default(cuid())
+  email          String
+  role           OrgRole      @default(MEMBER)
+  token          String       @unique
+  expiresAt      DateTime
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([email, organizationId])
+  @@map("invitations")
+}
+
 model PaymentHistory {
-  id                String   @id @default(cuid())
-  organizationId    String
-  
-  stripePaymentIntentId String @unique
-  amount            Int      // Amount in cents
-  currency          String   @default("usd")
-  status            PaymentStatus
-  
-  description       String?
-  receiptUrl        String?
-  
-  createdAt         DateTime @default(now())
-  
+  id             String @id @default(cuid())
+  organizationId String
+
+  stripePaymentIntentId String        @unique
+  amount                Int // Amount in cents
+  currency              String        @default("usd")
+  status                PaymentStatus
+
+  description String?
+  receiptUrl  String?
+
+  createdAt DateTime @default(now())
+
   @@index([organizationId])
   @@map("payment_history")
 }
@@ -330,41 +347,41 @@ model PaymentHistory {
 // ================================
 
 model AnalyticsEvent {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String?
   userId         String?
   sessionId      String?
-  
-  event          String   // e.g., 'knowledge_archived', 'search_performed'
-  properties     Json     @default("{}")
-  
+
+  event      String // e.g., 'knowledge_archived', 'search_performed'
+  properties Json   @default("{}")
+
   // Context
-  userAgent      String?
-  ipAddress      String?
-  referrer       String?
-  
-  timestamp      DateTime @default(now())
-  
+  userAgent String?
+  ipAddress String?
+  referrer  String?
+
+  timestamp DateTime @default(now())
+
   @@index([organizationId, event, timestamp])
   @@index([timestamp])
   @@map("analytics_events")
 }
 
 model SearchQuery {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
   userId         String?
-  
-  query          String
-  resultsCount   Int
-  clickedResult  String?  // Knowledge item ID that was clicked
-  
+
+  query         String
+  resultsCount  Int
+  clickedResult String? // Knowledge item ID that was clicked
+
   // Query context
-  filters        Json     @default("{}")
-  sortBy         String?
-  
-  timestamp      DateTime @default(now())
-  
+  filters Json    @default("{}")
+  sortBy  String?
+
+  timestamp DateTime @default(now())
+
   @@index([organizationId, timestamp])
   @@index([userId])
   @@map("search_queries")
@@ -375,40 +392,40 @@ model SearchQuery {
 // ================================
 
 model WebhookEndpoint {
-  id             String   @id @default(cuid())
+  id             String @id @default(cuid())
   organizationId String
-  
-  url            String
-  secret         String   // For webhook signature verification
-  events         Json     @default("[]") // Array of events to listen to
-  
-  isActive       Boolean  @default(true)
-  lastTriggered  DateTime?
-  failureCount   Int      @default(0)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+
+  url    String
+  secret String // For webhook signature verification
+  events Json   @default("[]") // Array of events to listen to
+
+  isActive      Boolean   @default(true)
+  lastTriggered DateTime?
+  failureCount  Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("webhook_endpoints")
 }
 
 model WebhookDelivery {
-  id             String   @id @default(cuid())
-  endpointId     String
-  
-  eventType      String
-  payload        Json
-  response       Json?
-  
-  status         WebhookStatus
-  httpStatus     Int?
-  errorMessage   String?
-  
-  attemptCount   Int      @default(1)
-  nextRetryAt    DateTime?
-  
-  createdAt      DateTime @default(now())
-  
+  id         String @id @default(cuid())
+  endpointId String
+
+  eventType String
+  payload   Json
+  response  Json?
+
+  status       WebhookStatus
+  httpStatus   Int?
+  errorMessage String?
+
+  attemptCount Int       @default(1)
+  nextRetryAt  DateTime?
+
+  createdAt DateTime @default(now())
+
   @@index([endpointId, status])
   @@map("webhook_deliveries")
 }
@@ -430,8 +447,7 @@ model Account {
   scope             String?
   id_token          String? @db.Text
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -453,7 +469,7 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
-  @@map("verificationtokens")
+  @@map("verification_tokens")
 }
 
 // ================================
@@ -475,9 +491,9 @@ enum OrgStatus {
 }
 
 enum GlobalRole {
-  SUPER_ADMIN  // System owner
-  ADMIN        // Can manage multiple orgs
-  USER         // Regular user
+  SUPER_ADMIN // System owner
+  ADMIN // Can manage multiple orgs
+  USER // Regular user
 }
 
 enum OrgRole {
@@ -514,7 +530,7 @@ enum IntegrationType {
   ROCKET_CHAT
   ZULIP
   TELEGRAM
-  
+
   // Output Integrations (Envio para wikis)
   NOTION_OUT
   CONFLUENCE
@@ -526,7 +542,7 @@ enum IntegrationType {
   SLAP
   BOOKSTACK
   GITHUB_WIKI
-  
+
   // Other Integrations
   JIRA
   WEBHOOK

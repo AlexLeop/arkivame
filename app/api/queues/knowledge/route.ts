@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { createKnowledgeItem } from '@/lib/knowledge';
 import { KnowledgeArchivalJobData } from '@/lib/queue';
 import { getSlackClientForEvent, getSlackThreadMessages } from '@/lib/slack';
+import { generateEmbedding } from '@/lib/openai';
 import logger from '@/lib/logger';
 
 // Esta função atua como o processador BullMQ para a fila 'knowledge-archival'.
@@ -15,7 +15,15 @@ export async function POST(request: Request) {
   }
 
   const job: { data: KnowledgeArchivalJobData } = await request.json();
-  const { teamId, channelId, threadTs, reactingUserId } = job.data;
+
+  if (job.data.source !== 'SLACK') {
+    // Atualmente, este worker só processa jobs do Slack
+    const message = `Unsupported job source: ${job.data.source}`;
+    logger.warn({ jobData: job.data }, message);
+    return NextResponse.json({ success: false, error: message }, { status: 200 });
+  }
+
+  const { teamId, channelId, threadTs, reactingUserId } = job.data.payload;
 
   try {
     // 1. Encontra a organização correspondente no banco de dados
@@ -57,18 +65,71 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: 'No messages to archive.' });
     }
 
-    // 4. Usa o serviço `createKnowledgeItem` para criar o item com embedding
-    const title = rootMessage.text.substring(0, 150);
-    const content = messages.map((msg: any) => ({ author: msg.user, content: msg.text, timestamp: msg.ts }));
+    // 4. Prepara e cria o item de conhecimento com embedding
+    const title = (rootMessage.text ?? '').substring(0, 150);
+    const content = messages.map((msg: { user?: string, text?: string, ts?: string }) => ({ author: msg.user, content: msg.text, timestamp: msg.ts }));
 
-    await createKnowledgeItem({ organizationId: organization.id, createdById: user.id, title, content, sourceType: 'SLACK', channelId, channelName: channelName ?? 'unknown', rootMessageAuthor: rootMessage.user, threadId: threadTs, originalTimestamp: new Date(parseFloat(threadTs) * 1000) });
+    const textForEmbedding = content
+      .map(msg => `${msg.author || 'unknown'}: ${msg.content || ''}`)
+      .join('\n\n');
+    const embedding = await generateEmbedding(textForEmbedding);
+
+    // Convert content to JSON string for SQL insertion
+    const contentJson = JSON.stringify(content);
+    const timestamp = new Date(parseFloat(threadTs) * 1000);
+    const rootAuthor = rootMessage.user ?? 'unknown';
+    const channelNameValue = channelName ?? 'unknown';
+
+    // Use raw SQL to insert with vector embedding
+    await prisma.$executeRaw`
+      INSERT INTO "KnowledgeItem" (
+        "id",
+        "organizationId",
+        "createdById",
+        "title",
+        "content",
+        "sourceType",
+        "channelId",
+        "channelName",
+        "rootMessageAuthor",
+        "threadId",
+        "originalTimestamp",
+        "embedding",
+        "createdAt",
+        "updatedAt"
+      ) VALUES (
+        gen_random_uuid(),
+        ${organization.id}::uuid,
+        ${user.id}::uuid,
+        ${title},
+        ${contentJson}::jsonb,
+        'SLACK',
+        ${channelId},
+        ${channelNameValue},
+        ${rootAuthor},
+        ${threadTs},
+        ${timestamp},
+        ${embedding}::vector(1536),
+        NOW(),
+        NOW()
+      )
+    `;
 
     logger.info({ ...job.data, organizationId: organization.id }, 'Successfully archived knowledge item.');
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     logger.error({ err: error, jobData: job.data }, 'Failed to process knowledge archival job.');
-    // Retorna 200 para evitar que a fila tente novamente um erro potencialmente irrecuperável.
-    return NextResponse.json({ success: false, error: error.message }, { status: 200 });
+
+    // Diferencia erros para a fila de processamento.
+    // Erros de "não encontrado" (not found) não devem ser repetidos.
+    if (error.message.includes('not found')) {
+      // Retorna 200 para confirmar o recebimento e evitar que a fila tente novamente.
+      return NextResponse.json({ success: false, error: error.message }, { status: 200 });
+    }
+
+    // Para outros erros (ex: falha na API do Slack, problema de rede),
+    // retorna 500 para que a fila possa tentar novamente.
+    return NextResponse.json({ success: false, error: 'An unexpected error occurred. The job will be retried.' }, { status: 500 });
   }
 }

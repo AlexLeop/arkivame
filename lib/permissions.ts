@@ -19,3 +19,17 @@ export async function validateUserOrgAccess(userId: string, orgId: string): Prom
     throw new NotAuthorizedError('User is not a member of this organization.');
   }
 }
+
+export async function hasAdminPermission(userId: string, organizationId: string): Promise<boolean> {
+  const organizationUser = await prisma.organizationUser.findFirst({
+    where: {
+      userId,
+      organizationId,
+    },
+    select: {
+      role: true,
+    },
+  });
+
+  return organizationUser?.role === 'ADMIN';
+}

@@ -72,6 +72,11 @@ interface KnowledgeItem {
   updatedAt: string;
   views: number;
   bookmarked: boolean;
+  summary?: string;
+  actionItems?: string[];
+  decisions?: string[];
+  participants?: string[];
+  originalUrl?: string;
 }
 
 interface OrgStats {
@@ -335,6 +340,8 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
               </div>
             </div>
           </div>
+        </div>
+        
         {/* Main Content */}
         <Tabs defaultValue="knowledge" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
@@ -345,17 +352,17 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
           </TabsList>
 
           <TabsContent value="knowledge" className="space-y-6">
-            <div className="arkivame-card">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground">Knowledge Management</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <CardTitle>Knowledge Management</CardTitle>
+                    <CardDescription>
                       Browse and manage your organization&apos;s captured knowledge
-                    </p>
+                    </CardDescription>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" className="arkivame-button-ghost">
+                    <Button variant="outline" size="sm">
                       <Upload className="mr-2 h-4 w-4" />
                       Import
                     </Button>
