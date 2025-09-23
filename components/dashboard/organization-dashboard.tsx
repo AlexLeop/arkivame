@@ -284,59 +284,57 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Knowledge Items</CardTitle>
-              <Archive className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalKnowledge}</div>
-              <p className="text-xs text-muted-foreground">
-                Captured conversations
-              </p>
-            </CardContent>
-          </Card>
+          <div className="arkivame-metric-card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="arkivame-metric-label">Knowledge Items</p>
+                <p className="arkivame-metric-value">{stats.totalKnowledge}</p>
+                <p className="arkivame-metric-change-positive">+12% este mês</p>
+              </div>
+              <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                <Archive className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.activeUsers}</div>
-              <p className="text-xs text-muted-foreground">
-                Team members
-              </p>
-            </CardContent>
-          </Card>
+          <div className="arkivame-metric-card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="arkivame-metric-label">Tags</p>
+                <p className="arkivame-metric-value">{stats.totalTags}</p>
+                <p className="arkivame-metric-change-positive">+5% este mês</p>
+              </div>
+              <div className="h-12 w-12 bg-secondary/10 rounded-xl flex items-center justify-center">
+                <Tag className="h-6 w-6 text-secondary" />
+              </div>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tags</CardTitle>
-              <Tag className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalTags}</div>
-              <p className="text-xs text-muted-foreground">
-                Organization categories
-              </p>
-            </CardContent>
-          </Card>
+          <div className="arkivame-metric-card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="arkivame-metric-label">Usuários Ativos</p>
+                <p className="arkivame-metric-value">{stats.activeUsers}</p>
+                <p className="arkivame-metric-change-positive">+8% este mês</p>
+              </div>
+              <div className="h-12 w-12 bg-accent/10 rounded-xl flex items-center justify-center">
+                <Users className="h-6 w-6 text-accent" />
+              </div>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Monthly Views</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.monthlyViews}</div>
-              <p className="text-xs text-muted-foreground">
-                Knowledge accessed
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
+          <div className="arkivame-metric-card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="arkivame-metric-label">Visualizações</p>
+                <p className="arkivame-metric-value">{stats.monthlyViews}</p>
+                <p className="arkivame-metric-change-positive">+15% este mês</p>
+              </div>
+              <div className="h-12 w-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+            </div>
+          </div>
         {/* Main Content */}
         <Tabs defaultValue="knowledge" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
@@ -347,17 +345,17 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
           </TabsList>
 
           <TabsContent value="knowledge" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
+            <div className="arkivame-card">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
                   <div>
-                    <CardTitle>Knowledge Management</CardTitle>
-                    <CardDescription>
+                    <h3 className="text-lg font-semibold text-foreground">Knowledge Management</h3>
+                    <p className="text-sm text-muted-foreground">
                       Browse and manage your organization&apos;s captured knowledge
-                    </CardDescription>
+                    </p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="arkivame-button-ghost">
                       <Upload className="mr-2 h-4 w-4" />
                       Import
                     </Button>

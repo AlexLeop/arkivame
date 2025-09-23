@@ -7,66 +7,73 @@
 
 @layer base {
   :root {
-    /* Arkivame Brand Colors */
-    --primary: 218 49% 15%; /* #0A2540 - Azul Profundo */
+    /* Arkivame Brand Colors - Inspired by modern dashboard designs */
+    --primary: 250 84% 54%; /* #4F46E5 - Indigo vibrante */
     --primary-foreground: 0 0% 100%;
-    --secondary: 176 75% 52%; /* #2ED9C3 - Ciano Vibrante */
-    --secondary-foreground: 218 49% 15%;
-    --accent: 18 95% 60%; /* #FF6B35 - Laranja Energia */
+    --secondary: 217 91% 60%; /* #3B82F6 - Azul moderno */
+    --secondary-foreground: 0 0% 100%;
+    --accent: 142 76% 36%; /* #16A34A - Verde sucesso */
     --accent-foreground: 0 0% 100%;
     
-    --muted: 200 6% 96%; /* #F5F6F7 */
-    --muted-foreground: 0 0% 44%; /* #707070 */
-    --neutral: 0 0% 44%; /* #707070 */
+    --muted: 220 14% 96%; /* #F8FAFC */
+    --muted-foreground: 215 16% 47%; /* #64748B */
+    --neutral: 215 16% 47%; /* #64748B */
     
     --background: 0 0% 100%;
-    --foreground: 218 49% 15%;
+    --foreground: 222 84% 5%; /* #020617 */
     
     --card: 0 0% 100%;
-    --card-foreground: 218 49% 15%;
+    --card-foreground: 222 84% 5%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 218 49% 15%;
+    --popover-foreground: 222 84% 5%;
     
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
+    --border: 220 13% 91%; /* #E2E8F0 */
+    --input: 220 13% 91%;
     
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     
-    --ring: 176 75% 52%;
+    --ring: 250 84% 54%;
     
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+    
+    /* Custom gradient colors */
+    --gradient-from: 250 84% 54%; /* Indigo */
+    --gradient-to: 217 91% 60%; /* Blue */
+    --success: 142 76% 36%; /* Green */
+    --warning: 38 92% 50%; /* Amber */
+    --info: 199 89% 48%; /* Cyan */
   }
   
   .dark {
-    --background: 218 49% 15%;
-    --foreground: 0 0% 98%;
+    --background: 222 84% 5%; /* #020617 */
+    --foreground: 210 40% 98%; /* #F8FAFC */
     
-    --card: 218 45% 18%;
-    --card-foreground: 0 0% 98%;
+    --card: 224 71% 4%; /* #0F172A */
+    --card-foreground: 210 40% 98%;
     
-    --popover: 218 45% 18%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 210 40% 98%;
     
-    --primary: 176 75% 52%;
-    --primary-foreground: 218 49% 15%;
+    --primary: 250 84% 54%;
+    --primary-foreground: 0 0% 100%;
     
-    --secondary: 218 45% 20%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 215 25% 27%; /* #334155 */
+    --secondary-foreground: 210 40% 98%;
     
-    --muted: 218 45% 18%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 215 28% 17%; /* #1E293B */
+    --muted-foreground: 217 10% 65%; /* #94A3B8 */
     
-    --accent: 18 95% 60%;
+    --accent: 142 76% 36%;
     --accent-foreground: 0 0% 100%;
     
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 218 45% 25%;
-    --input: 218 45% 25%;
-    --ring: 176 75% 52%;
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 250 84% 54%;
   }
 }
 
@@ -87,23 +94,31 @@
   }
   
   .brand-gradient {
-    background: linear-gradient(135deg, #0A2540 0%, #2ED9C3 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
   }
   
   .brand-accent-gradient {
-    background: linear-gradient(135deg, #FF6B35 0%, #2ED9C3 50%, #0A2540 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 50%, hsl(var(--accent)) 100%);
   }
   
   .arkivame-shadow {
-    box-shadow: 0 4px 6px -1px rgba(10, 37, 64, 0.1), 0 2px 4px -1px rgba(10, 37, 64, 0.06);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   }
   
   .arkivame-shadow-lg {
-    box-shadow: 0 10px 15px -3px rgba(10, 37, 64, 0.1), 0 4px 6px -2px rgba(10, 37, 64, 0.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  
+  .arkivame-shadow-xl {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   }
   
   .arkivame-glow {
-    box-shadow: 0 0 20px rgba(46, 217, 195, 0.3);
+    box-shadow: 0 0 20px hsla(var(--primary), 0.3);
+  }
+  
+  .arkivame-glow-secondary {
+    box-shadow: 0 0 20px hsla(var(--secondary), 0.3);
   }
 }
 
@@ -113,27 +128,87 @@
   }
   
   .arkivame-card {
-    @apply bg-card border border-border rounded-lg arkivame-shadow;
+    @apply bg-card border border-border rounded-xl arkivame-shadow hover:arkivame-shadow-lg transition-all duration-200;
+  }
+  
+  .arkivame-card-interactive {
+    @apply arkivame-card hover:scale-[1.02] cursor-pointer;
   }
   
   .arkivame-button-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-2 focus:ring-primary focus:ring-offset-2;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg px-4 py-2 font-medium transition-all duration-200;
   }
   
   .arkivame-button-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90 focus:ring-2 focus:ring-secondary focus:ring-offset-2;
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90 focus:ring-2 focus:ring-secondary focus:ring-offset-2 rounded-lg px-4 py-2 font-medium transition-all duration-200;
   }
   
   .arkivame-button-accent {
-    @apply bg-accent text-accent-foreground hover:bg-accent/90 focus:ring-2 focus:ring-accent focus:ring-offset-2;
+    @apply bg-accent text-accent-foreground hover:bg-accent/90 focus:ring-2 focus:ring-accent focus:ring-offset-2 rounded-lg px-4 py-2 font-medium transition-all duration-200;
+  }
+  
+  .arkivame-button-ghost {
+    @apply bg-transparent text-foreground hover:bg-muted focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg px-4 py-2 font-medium transition-all duration-200;
   }
   
   .arkivame-input {
-    @apply border-input bg-background text-foreground placeholder:text-muted-foreground focus:border-secondary focus:ring-1 focus:ring-secondary;
+    @apply border-input bg-background text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2 transition-all duration-200;
+  }
+  
+  .arkivame-sidebar {
+    @apply bg-card border-r border-border w-64 h-full flex flex-col;
+  }
+  
+  .arkivame-sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg mx-2 transition-all duration-200;
+  }
+  
+  .arkivame-sidebar-item-active {
+    @apply arkivame-sidebar-item text-primary bg-primary/10;
+  }
+  
+  .arkivame-sidebar-item-active:hover {
+    @apply bg-primary/20;
   }
   
   .arkivame-tag {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground;
+  }
+  
+  .arkivame-tag-primary {
+    @apply arkivame-tag bg-primary/10 text-primary;
+  }
+  
+  .arkivame-tag-secondary {
+    @apply arkivame-tag bg-secondary/10 text-secondary;
+  }
+  
+  .arkivame-tag-accent {
+    @apply arkivame-tag bg-accent/10 text-accent;
+  }
+  
+  .arkivame-metric-card {
+    @apply arkivame-card p-6 space-y-2;
+  }
+  
+  .arkivame-metric-value {
+    @apply text-2xl font-bold text-foreground;
+  }
+  
+  .arkivame-metric-label {
+    @apply text-sm text-muted-foreground;
+  }
+  
+  .arkivame-metric-change {
+    @apply text-xs font-medium;
+  }
+  
+  .arkivame-metric-change-positive {
+    @apply arkivame-metric-change text-green-600;
+  }
+  
+  .arkivame-metric-change-negative {
+    @apply arkivame-metric-change text-red-600;
   }
   
   .animate-count-up {
@@ -188,7 +263,7 @@
   /* Custom scrollbar */
   .arkivame-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: #2ED9C3 transparent;
+    scrollbar-color: hsl(var(--primary)) transparent;
   }
   
   .arkivame-scrollbar::-webkit-scrollbar {
@@ -201,12 +276,12 @@
   }
   
   .arkivame-scrollbar::-webkit-scrollbar-thumb {
-    background: #2ED9C3;
+    background: hsl(var(--primary));
     border-radius: 3px;
   }
   
   .arkivame-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #26c4b0;
+    background: hsl(var(--primary) / 0.8);
   }
   
   /* Loading states */
