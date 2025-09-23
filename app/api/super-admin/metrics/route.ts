@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
           status: 'ACTIVE'
         }
       }),
-      prisma.knowledge.count(),
+      prisma.knowledgeItem.count(),
       prisma.organization.count({
         where: {
           createdAt: { gte: startDate }
