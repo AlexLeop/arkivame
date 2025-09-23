@@ -245,3 +245,7 @@ export const config = {
 // Prisma, which is used in `validateUserOrgAccess`, is not compatible with the
 // Edge runtime.
 export const runtime = 'nodejs';
+
+// @ts-expect-error
+import { PrismaClient } from '@prisma/client';
+
