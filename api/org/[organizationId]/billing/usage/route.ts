@@ -36,12 +36,20 @@ export async function GET(request: NextRequest, { params }: { params: { organiza
       where: { organizationId: params.organizationId, isActive: true },
     });
 
-    // Calculate storage usage (simplified - assuming content field stores size in bytes)
-    const storageUsage = await prisma.knowledgeItem.aggregate({
+    // Calculate storage usage by summing the size of the content field for each knowledge item
+    const knowledgeItems = await prisma.knowledgeItem.findMany({
       where: { organizationId: params.organizationId },
-      _sum: { content: true }, // Assuming 'content' field can be aggregated for size
+      select: { content: true },
     });
-    const storageGB = (storageUsage._sum.content || 0) / (1024 * 1024 * 1024);
+
+    let totalContentSize = 0;
+    for (const item of knowledgeItems) {
+      if (item.content) {
+        // Convert JSON content to string and get its length in bytes (approx)
+        totalContentSize += JSON.stringify(item.content).length;
+      }
+    }
+    const storageGB = totalContentSize / (1024 * 1024 * 1024);
 
     const usageData = {
       plan: currentPlan,

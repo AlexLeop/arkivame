@@ -86,12 +86,12 @@ export async function GET() {
       include: {
         _count: {
           select: {
-            knowledgeItems: true
+            createdKnowledge: true
           }
         }
       },
       orderBy: {
-        knowledgeItems: {
+                createdKnowledge: {
           _count: 'desc'
         }
       },
@@ -157,10 +157,10 @@ export async function GET() {
         monthly: monthlyTrends
       },
       activity: {
-        topUsers: topUsers.map((user: { name: string | null; email: string; _count: { knowledgeItems: number } }) => ({
+        topUsers: topUsers.map((user: { name: string | null; email: string; _count: { createdKnowledge: number } }) => ({
           name: user.name || 'Unknown User',
           email: user.email,
-          items: user._count.knowledgeItems,
+          items: user._count.createdKnowledge,
           views: 0 // Placeholder - would need view tracking per user
         })),
         topContent: topContent.map((item: {

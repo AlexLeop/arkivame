@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
 import Stripe from 'stripe';
-import { redisConnection } from './redis.connection';
+import { redisConnection } from '../redis/redis.connection';
 import logger from '@/lib/logger';
 import {
   handleCheckoutSessionCompleted,

@@ -35,12 +35,12 @@ export async function GET(request: Request) {
     // Fetch actual integration statuses from DB if available
     const connectedIntegrations = await prisma.integration.findMany({
       where: { organizationId },
-      select: { type: true, status: true },
+      select: { type: true, isActive: true },
     });
 
     connectedIntegrations.forEach(integration => {
-      if (integration.type === 'SLACK') integrationsStatus.slack = integration.status.toLowerCase();
-      if (integration.type === 'DISCORD') integrationsStatus.discord = integration.status.toLowerCase();
+      if (integration.type === 'SLACK') integrationsStatus.slack = integration.isActive ? 'connected' : 'disconnected';
+      if (integration.type === 'DISCORD') integrationsStatus.discord = integration.isActive ? 'connected' : 'disconnected';
       // Add other integrations as needed
     });
 

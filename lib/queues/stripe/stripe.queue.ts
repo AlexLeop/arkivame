@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { redisConnection } from './redis.connection';
+import { redisConnection } from '../redis/redis.connection';
 
 export const stripeWebhookQueue = new Queue('stripe-webhooks', {
   connection: redisConnection,

@@ -35,7 +35,7 @@ export async function POST(
         organizationId
       },
       data: {
-        views: {
+        viewCount: {
           increment: 1
         }
       }

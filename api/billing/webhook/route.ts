@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, getPlanByPriceId } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
+import { Plan } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,14 +53,14 @@ export async function POST(request: NextRequest) {
                 status: subscription.status.toUpperCase(),
                 stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
                 cancelAtPeriodEnd: subscription.cancel_at_period_end,
-                plan: plan,
+                plan: plan as Plan,
               },
               create: {
                 stripeCustomerId: subscription.customer,
                 stripeSubscriptionId: subscription.id,
                 stripePriceId: subscription.items.data[0].price.id,
                 stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-                plan: plan,
+                plan: plan as Plan,
                 status: subscription.status.toUpperCase(),
                 organizationId: org.id,
               },

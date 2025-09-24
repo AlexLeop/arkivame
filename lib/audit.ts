@@ -25,7 +25,13 @@ export async function logAudit(
 ) {
   try {
     await prisma.auditLog.create({
-      data: { organizationId, actorId, action, details },
+      data: {
+        organizationId,
+        userId: actorId,
+        action,
+        details,
+        entity: 'ORGANIZATION'
+      },
     });
   } catch (error) {
     logger.error(

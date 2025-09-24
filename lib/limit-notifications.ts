@@ -11,8 +11,8 @@ export async function checkAndNotifyLimits(organizationId: string, usageType: 'm
         subscription: true,
         _count: {
           select: {
-            members: true,
-            knowledgeItems: true,
+            users: true,
+            knowledgeBase: true,
           },
         },
       },
@@ -42,9 +42,9 @@ export async function checkAndNotifyLimits(organizationId: string, usageType: 'm
 
     // Get current usage
     const currentUsage = {
-      members: _count.members,
+      members: _count.users,
       // For demo purposes, using knowledge count as storage
-      storage: _count.knowledgeItems * 0.1, // Assuming 0.1MB per knowledge item
+      storage: _count.knowledgeBase * 0.1, // Assuming 0.1MB per knowledge item
     };
 
     // Check if we're close to the limit (80% or more)
@@ -64,11 +64,10 @@ export async function checkAndNotifyLimits(organizationId: string, usageType: 'm
 
     if (isNearLimit) {
       // Get organization admins
-      const admins = await prisma.organizationMember.findMany({
+      const admins = await prisma.organizationUser.findMany({
         where: {
           organizationId,
           role: 'ADMIN',
-          user: { email: { not: null } },
         },
         include: { user: true },
       });

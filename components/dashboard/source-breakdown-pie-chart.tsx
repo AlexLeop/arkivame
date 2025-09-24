@@ -39,12 +39,19 @@ export function SourceBreakdownPieChart({ data }: SourceBreakdownPieChartProps) 
               dataKey="value"
               nameKey="name"
               label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                const typedCx = cx as number;
+                const typedCy = cy as number;
+                const typedMidAngle = midAngle as number;
+                const typedInnerRadius = innerRadius as number;
+                const typedOuterRadius = outerRadius as number;
+                const typedPercent = percent as number;
+
+                const radius = typedInnerRadius + (typedOuterRadius - typedInnerRadius) * 0.5;
+                const x = typedCx + radius * Math.cos(-typedMidAngle * (Math.PI / 180));
+                const y = typedCy + radius * Math.sin(-typedMidAngle * (Math.PI / 180));
                 return (
-                  <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                    {`${(percent * 100).toFixed(0)}%`}
+                  <text x={x} y={y} fill="white" textAnchor={x > typedCx ? 'start' : 'end'} dominantBaseline="central">
+                    {`${(typedPercent * 100).toFixed(0)}%`}
                   </text>
                 );
               }}

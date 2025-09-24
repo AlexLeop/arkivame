@@ -2,18 +2,54 @@ import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 import logger from '@/lib/logger';
 
-// BullMQ requer uma conexão Redis padrão (não a API REST do Upstash)
-const connection =
-  process.env.REDIS_URL
-    ? new IORedis(process.env.REDIS_URL, {
-        // BullMQ recomenda esta configuração para evitar novas tentativas em conexões instáveis
-        maxRetriesPerRequest: null,
-      })
-    : null;
+let connection: IORedis | null = null;
+let knowledgeQueueInstance: Queue<KnowledgeArchivalJobData, any, KnowledgeJobName> | null = null;
+let emailQueueInstance: Queue<EmailJobData, any, EmailJobName> | null = null;
 
-if (!connection) {
+function getRedisConnection() {
+  if (connection) {
+    return connection;
+  }
+
+  if (process.env.REDIS_URL) {
+    connection = new IORedis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: null,
+    });
+    return connection;
+  }
+
   logger.warn('Queue system is disabled. REDIS_URL is not configured.');
+  return null;
 }
+
+export function getKnowledgeQueue() {
+  if (knowledgeQueueInstance) {
+    return knowledgeQueueInstance;
+  }
+
+  const conn = getRedisConnection();
+  if (conn) {
+    knowledgeQueueInstance = new Queue<KnowledgeArchivalJobData, any, KnowledgeJobName>('knowledge-archival', { connection: conn });
+    return knowledgeQueueInstance;
+  }
+
+  return null;
+}
+
+export function getEmailQueue() {
+  if (emailQueueInstance) {
+    return emailQueueInstance;
+  }
+
+  const conn = getRedisConnection();
+  if (conn) {
+    emailQueueInstance = new Queue<EmailJobData, any, EmailJobName>('email-sending', { connection: conn });
+    return emailQueueInstance;
+  }
+
+  return null;
+}
+
 
 // Define a estrutura de dados do trabalho de arquivamento
 export type KnowledgeArchivalJobData =
@@ -65,17 +101,9 @@ export type EmailJobData =
       payload: LimitWarningPayload;
     };
 
-// Cria e exporta a fila de arquivamento
-export const knowledgeQueue = connection ?
-  new Queue<KnowledgeArchivalJobData, any, KnowledgeJobName>('knowledge-archival', { connection })
-  : null;
-
-// Cria e exporta a fila de e-mails
-export const emailQueue = connection
-  ? new Queue<EmailJobData, any, EmailJobName>('email-sending', { connection })
-  : null;
 
 export async function addKnowledgeArchivalJob(data: KnowledgeArchivalJobData) {
+  const knowledgeQueue = getKnowledgeQueue();
   if (!knowledgeQueue) throw new Error('Fila não inicializada.');
 
   let jobName: KnowledgeJobName;
@@ -99,6 +127,7 @@ export async function addKnowledgeArchivalJob(data: KnowledgeArchivalJobData) {
 }
 
 export async function addEmailJob(data: EmailJobData) {
+  const emailQueue = getEmailQueue();
   if (!emailQueue) throw new Error('Fila de e-mail não inicializada.');
 
   await emailQueue.add('send-email', data, {

@@ -220,6 +220,7 @@ model Integration {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  @@unique([organizationId, name])
   @@map("integrations")
 }
 

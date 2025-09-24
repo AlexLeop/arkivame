@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { prisma } from '@/lib/db';
+import { IntegrationType } from '@prisma/client'; // Import IntegrationType
 
 export async function POST(
   request: Request,
@@ -21,17 +22,26 @@ export async function POST(
       return NextResponse.json({ error: 'Organization ID is required' }, { status: 400 });
     }
 
-    // In a real application, you would update the database to reflect
-    // the disconnected status and potentially revoke tokens.
+    // Convert to uppercase and validate against IntegrationType enum
+    const integrationType = integrationId.toUpperCase() as IntegrationType;
+    
+    // Validate the integration type is valid
+    if (!Object.values(IntegrationType).includes(integrationType)) {
+      return NextResponse.json(
+        { error: 'Invalid integration type' },
+        { status: 400 }
+      );
+    }
+
+    // Update the integration status
     await prisma.integration.updateMany({
       where: {
         organizationId,
-        type: integrationId.toUpperCase(), // Assuming integrationId matches the enum in Prisma
+        type: integrationType,
       },
       data: {
-        status: 'DISCONNECTED',
-        accessToken: null, // Clear sensitive data
-        refreshToken: null,
+        isActive: false,
+        credentials: {},
         updatedAt: new Date(),
       },
     });

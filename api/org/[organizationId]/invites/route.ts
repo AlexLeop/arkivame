@@ -74,7 +74,7 @@ export async function POST(
     const session = await getServerSession(authOptions);
     const actorId = session!.user.id;
 
-    if (!(await hasAdminPermission(organizationId, actorId))) {
+    if (!(await hasAdminPermission(prisma, actorId, organizationId))) {
       return NextResponse.json({ error: "You don't have permission to invite members." }, { status: 403 });
     }
 

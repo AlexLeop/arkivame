@@ -29,14 +29,27 @@ export async function POST(
 
     const organizationId = user.organizations[0].id;
 
-    // Update bookmark status
+    // Fetch the existing knowledge item to get its sourceMetadata
+    const knowledgeItem = await prisma.knowledgeItem.findUnique({
+      where: { id, organizationId },
+      select: { sourceMetadata: true }
+    });
+
+    if (!knowledgeItem) {
+      return NextResponse.json({ error: 'Knowledge item not found' }, { status: 404 });
+    }
+
+    // Update bookmark status in sourceMetadata
     await prisma.knowledgeItem.update({
       where: {
         id,
         organizationId
       },
       data: {
-        bookmarked
+        sourceMetadata: {
+          ...(knowledgeItem.sourceMetadata as object),
+          bookmarked: bookmarked,
+        },
       }
     });
 

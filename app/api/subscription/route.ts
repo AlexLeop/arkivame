@@ -113,8 +113,11 @@ async function getOrCreateStripeCustomerId(user: any, organization: any) {
       organizationId: organization.id,
       stripeCustomerId: customer.id,
       plan: 'FREE', // Default plan
-      status: 'incomplete',
-      stripeSubscriptionId: 'dummy_sub_id_for_upsert'
+      status: 'INCOMPLETE',
+      stripeSubscriptionId: 'dummy_sub_id_for_upsert',
+      stripePriceId: PLANS.FREE.stripePriceId || '', // Assuming FREE plan has a stripePriceId
+      stripeCurrentPeriodEnd: new Date(), // Placeholder
+      organization: { connect: { id: organization.id } },
     },
   });
 

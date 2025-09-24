@@ -213,9 +213,7 @@ async function handleReactionAdded(event: any) {
     } catch (error) {
       logger.error({ error }, 'Error handling reaction archive');
     }
-  }
-
-  return NextResponse.json({ status: 'ok' });
+    return NextResponse.json({ status: 'ok' });
 }
 
 function formatSlackMessages(messages: any[]): string {

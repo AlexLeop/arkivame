@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     const slack = new SlackIntegration(credentials);
 
     // 4. Get the thread using the captureThread method
-    const thread = await slack.captureThread(threadTs, channelId);
+    const thread = await slack.captureThread(`${threadTs}:${channelId}`);
     
     if (!thread || !thread.messages || thread.messages.length === 0) {
       throw new Error(`Failed to capture thread: ${threadTs} in channel ${channelId}`);

@@ -5,20 +5,20 @@ import { SourceBreakdownPieChart } from '@/components/dashboard/source-breakdown
 import { TopTagsList } from '@/components/dashboard/top-tags-list';
 import { RecentActivityFeed } from '@/components/dashboard/recent-activity-feed';
 import { Eye, Tag, Users, BarChart } from 'lucide-react';
-import { auth } from '@/lib/auth'; // Usando a session do lado do servidor
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-config';
 
 async function getAnalyticsData(organizationId: string) {
-  const session = await auth();
-  if (!session) return null;
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    console.error('No session found');
+    return null;
+  }
 
   // Esta função agora faria a chamada para a API interna
   // Como estamos no mesmo app, podemos chamar a lógica diretamente
   // mas para seguir o padrão, vamos simular a chamada de API.
-  const response = await fetch(`${process.env.NEXTAUTH_URL}/api/analytics`, {
-    headers: {
-      Cookie: `next-auth.session-token=${session.token}`
-    }
-  });
+  const response = await fetch(`${process.env.NEXTAUTH_URL}/api/analytics`);
 
   if (!response.ok) {
     // Tratar erro, talvez retornar dados vazios ou um estado de erro

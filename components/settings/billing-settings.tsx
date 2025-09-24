@@ -27,7 +27,7 @@ interface SubscriptionDetails {
 }
 
 interface PlanDetails {
-  key: 'STARTER' | 'BUSINESS' | 'ENTERPRISE';
+  key: 'FREE' | 'STARTER' | 'BUSINESS' | 'ENTERPRISE';
   name: string;
   price: {
     monthly: number;

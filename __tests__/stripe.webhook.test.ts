@@ -3,7 +3,6 @@ import { stripe } from '@/lib/stripe';
 import logger from '@/lib/logger';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { stripeWebhookQueue } from '@/lib/queues/stripe/stripe.queue';
 
 // Mock dependencies
 const mockRatelimitLimit = jest.fn();
@@ -39,17 +38,19 @@ jest.mock('next/headers', () => ({
 jest.mock('@/lib/logger', () => ({
   info: jest.fn(),
   error: jest.fn(),
+  warn: jest.fn(),
 }));
 
-jest.mock('@/lib/queues/stripe/stripe.queue', () => ({
-  stripeWebhookQueue: {
-    add: jest.fn(),
-  },
+const mockStripeQueueAdd = jest.fn();
+jest.mock('@/lib/queues/stripe.queue', () => ({
+    getStripeQueue: () => ({
+        add: mockStripeQueueAdd,
+    }),
 }));
+
 
 // Type assertion for mocked functions
 const mockedStripeWebhooksConstruct = stripe.webhooks.constructEvent as jest.Mock;
-const mockedStripeQueueAdd = stripeWebhookQueue.add as jest.Mock;
 
 describe('Stripe Webhook Handler (POST /api/webhooks/stripe)', () => {
   beforeEach(() => {
@@ -114,7 +115,7 @@ describe('Stripe Webhook Handler (POST /api/webhooks/stripe)', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(mockedStripeQueueAdd).toHaveBeenCalledWith('checkout.session.completed', { event: mockEvent });
+    expect(mockStripeQueueAdd).toHaveBeenCalledWith('checkout.session.completed', { event: mockEvent });
   });
 
   it('should enqueue an invoice.payment_succeeded event', async () => {
@@ -143,7 +144,7 @@ describe('Stripe Webhook Handler (POST /api/webhooks/stripe)', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(mockedStripeQueueAdd).toHaveBeenCalledWith('invoice.payment_succeeded', { event: mockEvent });
+    expect(mockStripeQueueAdd).toHaveBeenCalledWith('invoice.payment_succeeded', { event: mockEvent });
   });
 
   it('should enqueue a customer.subscription.updated event', async () => {
@@ -184,7 +185,7 @@ describe('Stripe Webhook Handler (POST /api/webhooks/stripe)', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(mockedStripeQueueAdd).toHaveBeenCalledWith('customer.subscription.updated', { event: mockEvent });
+    expect(mockStripeQueueAdd).toHaveBeenCalledWith('customer.subscription.updated', { event: mockEvent });
   });
 
   it('should enqueue a customer.subscription.deleted event', async () => {
@@ -212,7 +213,7 @@ describe('Stripe Webhook Handler (POST /api/webhooks/stripe)', () => {
 
     // Assert
     expect(response.status).toBe(200);
-    expect(mockedStripeQueueAdd).toHaveBeenCalledWith('customer.subscription.deleted', { event: mockEvent });
+    expect(mockStripeQueueAdd).toHaveBeenCalledWith('customer.subscription.deleted', { event: mockEvent });
   });
 
   it('should return 400 for invalid signature', async () => {
@@ -243,7 +244,7 @@ describe('Stripe Webhook Handler (POST /api/webhooks/stripe)', () => {
     };
 
     mockedStripeWebhooksConstruct.mockReturnValue(mockEvent as Stripe.Event);
-    mockedStripeQueueAdd.mockRejectedValue(new Error(errorMessage));
+    mockStripeQueueAdd.mockRejectedValue(new Error(errorMessage));
 
     const req = createMockRequest(JSON.stringify(mockEvent));
 

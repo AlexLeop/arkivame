@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Search } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 import { ptBR } from 'date-fns/locale';
 
 type AuditLogAction =
@@ -57,6 +58,7 @@ interface AuditLogSettingsProps {
 }
 
 export function AuditLogSettings({ organizationId }: AuditLogSettingsProps) {
+  const { toast } = useToast();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [filters, setFilters] = useState({ actorId: '', action: '', search: '' });
@@ -93,12 +95,16 @@ export function AuditLogSettings({ organizationId }: AuditLogSettingsProps) {
       setNextCursor(data.nextCursor || null);
     } catch (error) {
       console.error(error);
-      toast.error('Could not load audit logs.');
+      toast({
+        title: 'Error',
+        description: 'Could not load audit logs.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [organizationId, filters]);
+  }, [organizationId, filters, toast]);
 
   useEffect(() => {
     async function fetchMembers() {

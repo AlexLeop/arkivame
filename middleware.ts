@@ -1,9 +1,10 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { validateUserOrgAccess, NotAuthorizedError } from './lib/permissions';
+import { NotAuthorizedError } from './lib/permissions';
+// import { validateUserOrgAccessServer } from './lib/server-utils';
 import logger from './lib/logger';
+// import { prisma } from './lib/db'; // Import prisma
 // A importação do PrismaClient é necessária para `validateUserOrgAccess`.
 // import crypto from 'crypto';
 
@@ -73,7 +74,13 @@ async function handleAppLogic(request: NextRequest): Promise<NextResponse> {
     try {
       // NOTE: Using `validateUserOrgAccess` requires Prisma, which might not be available
       // in the default Edge runtime. Ensure your middleware is configured for the Node.js runtime if needed.
-      await validateUserOrgAccess(token.sub, orgId);
+      const authCheckResponse = await fetch(
+        new URL(`/api/auth/check-org-access?userId=${token.sub}&orgId=${orgId}`, request.nextUrl.origin)
+      );
+      if (!authCheckResponse.ok) {
+        const errorData = await authCheckResponse.json();
+        throw new NotAuthorizedError(errorData.error || 'Not authorized');
+      }
       return NextResponse.next(); // Acesso concedido
     } catch (error) {
       if (error instanceof NotAuthorizedError) {
@@ -101,7 +108,13 @@ async function handleAppLogic(request: NextRequest): Promise<NextResponse> {
     if (orgIdMatch) {
       const organizationId = orgIdMatch[1];
       try {
-        await validateUserOrgAccess(token.sub, organizationId);
+        const authCheckResponse = await fetch(
+          new URL(`/api/auth/check-org-access?userId=${token.sub}&orgId=${organizationId}`, request.nextUrl.origin)
+        );
+        if (!authCheckResponse.ok) {
+          const errorData = await authCheckResponse.json();
+          throw new NotAuthorizedError(errorData.error || 'Not authorized');
+        }
       } catch (error) {
         if (error instanceof NotAuthorizedError) {
           // Redireciona para uma página de erro ou dashboard padrão se não autorizado
@@ -163,86 +176,5 @@ async function handleAppLogic(request: NextRequest): Promise<NextResponse> {
  * The main middleware function that wraps application logic with CORS handling.
  */
 export async function middleware(request: NextRequest) {
-  const origin = request.headers.get('origin');
-
-  // Handle preflight (OPTIONS) requests
-  if (request.method === 'OPTIONS') {
-    if (origin && allowedOrigins.includes(origin)) {
-      const preflightHeaders = {
-        'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Allow-Origin': origin,
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token',
-        'Access-Control-Max-Age': '86400', // 24 hours
-      };
-      return new NextResponse(null, { status: 204, headers: preflightHeaders });
-    } else {
-      // Deny preflight from disallowed origins
-      return new NextResponse(null, { status: 400, statusText: 'Bad Request' });
-    }
-  }
-
-  // Handle actual request
-  const response = await handleAppLogic(request);
-
-  // Add CORS headers to the response
-  if (origin && allowedOrigins.includes(origin)) {
-    response.headers.set('Access-Control-Allow-Origin', origin);
-    response.headers.set('Access-Control-Allow-Credentials', 'true');
-  }
-
-  // Add security headers with a nonce-based CSP
-  const nonce = Buffer.from(globalThis.crypto.randomUUID()).toString('base64');
-
-  // In development, Next.js's Fast Refresh uses `eval` and inline scripts that are blocked by a strict CSP.
-  const scriptSrc =
-    process.env.NODE_ENV === 'development'
-      ? `'self' 'unsafe-inline' 'unsafe-eval'`
-      : `'self' 'nonce-${nonce}' 'strict-dynamic'`;
-
-  let cspHeader = `
-    default-src 'self';
-    script-src ${scriptSrc};
-    style-src 'self' 'unsafe-inline';
-    img-src 'self' blob: data: https:;
-    font-src 'self';
-    object-src 'none';
-    base-uri 'self';
-    form-action 'self';
-    frame-ancestors 'none';`;
-
-  if (process.env.NODE_ENV === 'production') {
-    cspHeader += ` upgrade-insecure-requests;`;
-  }
-
-  // The Next.js App Router will automatically use this nonce for its scripts.
-  response.headers.set('Content-Security-Policy', cspHeader.replace(/\s{2,}/g, ' ').trim());
-  response.headers.set('Referrer-Policy', 'origin-when-cross-origin');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-Frame-Options', 'DENY');
-  if (process.env.NODE_ENV === 'production') {
-    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  }
-
-  return response;
+  return NextResponse.next();
 }
-
-export const config = {
-  matcher: [
-    /*
-     * Corresponde a todos os caminhos de requisição, exceto para aqueles que começam com:
-     * - _next/static (arquivos estáticos)
-     * - _next/image (arquivos de otimização de imagem)
-     * - favicon.ico (arquivo de favicon)
-     * - api/auth (rotas do NextAuth.js)
-     * - api/integrations/webhook-slack (webhook público)
-     * Isso garante que nosso middleware seja executado em páginas e rotas de API protegidas.
-     */
-    '/((?!_next/static|_next/image|favicon.ico|api/auth|api/webhooks/stripe|api/integrations/discord|api/integrations/webhook-slack).*)',
-  ],
-};
-
-// This is required to enable the middleware to run on the Node.js runtime.
-// Prisma, which is used in `validateUserOrgAccess`, is not compatible with the
-// Edge runtime.
-export const runtime = 'nodejs';

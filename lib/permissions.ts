@@ -1,4 +1,4 @@
-import { prisma } from './db';
+import { PrismaClient } from '@prisma/client'; // Import PrismaClient type for type hinting
 
 export class NotAuthorizedError extends Error {
   constructor(message = 'Not authorized') {
@@ -7,7 +7,7 @@ export class NotAuthorizedError extends Error {
   }
 }
 
-export async function validateUserOrgAccess(userId: string, orgId: string): Promise<void> {
+export async function validateUserOrgAccess(prisma: PrismaClient, userId: string, orgId: string): Promise<void> {
   const organizationUser = await prisma.organizationUser.findFirst({
     where: {
       userId,
@@ -20,7 +20,7 @@ export async function validateUserOrgAccess(userId: string, orgId: string): Prom
   }
 }
 
-export async function hasAdminPermission(userId: string, organizationId: string): Promise<boolean> {
+export async function hasAdminPermission(prisma: PrismaClient, userId: string, organizationId: string): Promise<boolean> {
   const organizationUser = await prisma.organizationUser.findFirst({
     where: {
       userId,

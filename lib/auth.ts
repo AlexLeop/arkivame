@@ -81,7 +81,7 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async redirect({ url, baseUrl, session }) {
+    async redirect({ url, baseUrl }) {
       const finalBaseUrl =
         process.env.NODE_ENV === 'development' && baseUrl.startsWith('https')
           ? baseUrl.replace('https', 'http')
@@ -91,16 +91,6 @@ export const authOptions: NextAuthOptions = {
       const callbackUrl = new URL(url).searchParams.get('callbackUrl');
       if (callbackUrl) {
         return callbackUrl;
-      }
-
-      // Redirect based on user role or organization
-      if (session?.user?.role === 'SUPER_ADMIN') {
-        return `${finalBaseUrl}/super-admin`;
-      }
-
-      // If user has organizations, redirect to the first one
-      if (session?.user?.organizations && session.user.organizations.length > 0) {
-        return `${finalBaseUrl}/dashboard/${session.user.organizations[0].slug || session.user.organizations[0].id}`;
       }
 
       // Default redirect to dashboard or a generic home page

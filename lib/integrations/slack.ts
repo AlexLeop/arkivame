@@ -29,7 +29,8 @@ export class SlackIntegration extends InputIntegration {
     return this.connect();
   }
 
-  async captureThread(messageTs: string, channelId: string): Promise<CapturedThread> {
+  async captureThread(threadId: string): Promise<CapturedThread> {
+    const [messageTs, channelId] = threadId.split(':');
     try {
       // Get thread messages
       const threadsResponse = await this.client.conversations.replies({

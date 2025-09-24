@@ -27,6 +27,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MoreHorizontal, Loader2, UserPlus, Check, Trash2, Send, AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 import { PaginationControls } from '@/components/ui/pagination-controls';
 
 const inviteSchema = z.object({
@@ -64,6 +65,7 @@ interface MembersSettingsProps {
 }
 
 export function MembersSettings({ organizationId }: MembersSettingsProps) {
+  const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [membersPage, setMembersPage] = useState(1);
@@ -139,7 +141,11 @@ export function MembersSettings({ organizationId }: MembersSettingsProps) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to send invitation');
       }
-      toast.success(`Invitation sent to ${data.email}`);
+      toast({
+        title: 'Success',
+        description: `Invitation sent to ${data.email}`,
+        variant: 'success',
+      });
       form.reset({ email: '' });
       fetchInvites(invitesPage);
     } catch (error: any) {
@@ -164,7 +170,11 @@ export function MembersSettings({ organizationId }: MembersSettingsProps) {
       }
       // Refetch members to reflect the change
       fetchMembers(membersPage);
-      toast.success('Member removed successfully.');
+      toast({
+        title: 'Success',
+        description: 'Member removed successfully.',
+        variant: 'success',
+      });
     } catch (error: any) {
       console.error(error);
       setApiError(error.message || 'An unexpected error occurred.');
@@ -188,7 +198,11 @@ export function MembersSettings({ organizationId }: MembersSettingsProps) {
       }
       // Refetch invitations to reflect the change
       fetchInvites(invitesPage);
-      toast.success('Invitation revoked successfully.');
+      toast({
+        title: 'Success',
+        description: 'Invitation revoked successfully.',
+        variant: 'success',
+      });
     } catch (error: any) {
       console.error(error);
       setApiError(error.message || 'An unexpected error occurred.');
@@ -209,7 +223,11 @@ export function MembersSettings({ organizationId }: MembersSettingsProps) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to resend invitation');
       }
-      toast.success(`Invitation resent to ${invite.email}`);
+      toast({
+        title: 'Success',
+        description: `Invitation resent to ${invite.email}`,
+        variant: 'success',
+      });
     } catch (error: any) {
       console.error(error);
       setApiError(error.message || 'An unexpected error occurred.');
@@ -234,7 +252,11 @@ export function MembersSettings({ organizationId }: MembersSettingsProps) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to change role');
       }
-      toast.success("Member's role updated.");
+      toast({
+        title: 'Success',
+        description: "Member's role updated.",
+        variant: 'success',
+      });
     } catch (error: any) {
       // Revert optimistic update on failure
       setMembers(originalMembers);

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const mattermostUrl = process.env.MATTERMOST_URL;
-    const tokenResponse = await axios.post(`${mattermostUrl}/oauth/access_token', new URLSearchParams({
+    const tokenResponse = await axios.post(`${mattermostUrl}/oauth/access_token`, new URLSearchParams({
       client_id: process.env.MATTERMOST_CLIENT_ID!,
       client_secret: process.env.MATTERMOST_CLIENT_SECRET!,
       grant_type: 'authorization_code',

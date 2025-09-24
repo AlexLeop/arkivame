@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, { params }: { params: { organiza
       cursor: cursor ? { id: cursor } : undefined,
       orderBy: { timestamp: 'desc' },
       include: {
-        user: { select: { id: true, name: true, email: true, image: true } },
+        user: { select: { id: true, name: true, email: true } },
       },
     });
 

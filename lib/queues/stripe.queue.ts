@@ -2,22 +2,50 @@ import { Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import logger from '@/lib/logger';
 
-// Redis connection
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+let redisConnection: Redis | null = null;
+let stripeQueueInstance: Queue | null = null;
+let stripeWorkerInstance: Worker | null = null;
 
-// Stripe queue for processing webhooks
-export const stripeQueue = new Queue('stripe-webhooks', {
-  connection: redis,
-  defaultJobOptions: {
-    removeOnComplete: 100,
-    removeOnFail: 50,
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 2000,
-    },
-  },
-});
+function getRedisConnection() {
+  if (redisConnection) {
+    return redisConnection;
+  }
+
+  if (process.env.REDIS_URL) {
+    redisConnection = new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: null,
+    });
+    return redisConnection;
+  }
+
+  logger.warn('Stripe queue system is disabled. REDIS_URL is not configured.');
+  return null;
+}
+
+export function getStripeQueue() {
+  if (stripeQueueInstance) {
+    return stripeQueueInstance;
+  }
+
+  const connection = getRedisConnection();
+  if (connection) {
+    stripeQueueInstance = new Queue('stripe-webhooks', {
+      connection,
+      defaultJobOptions: {
+        removeOnComplete: 100,
+        removeOnFail: 50,
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+      },
+    });
+    return stripeQueueInstance;
+  }
+
+  return null;
+}
 
 // Job types
 export interface StripeWebhookJob {
@@ -29,6 +57,11 @@ export interface StripeWebhookJob {
 
 // Add job to queue
 export async function addStripeWebhookJob(job: StripeWebhookJob) {
+  const stripeQueue = getStripeQueue();
+  if (!stripeQueue) {
+    throw new Error('Stripe queue not initialized');
+  }
+
   try {
     await stripeQueue.add('process-webhook', job, {
       jobId: job.eventId, // Prevent duplicate processing
@@ -48,60 +81,72 @@ export async function addStripeWebhookJob(job: StripeWebhookJob) {
   }
 }
 
-// Worker to process jobs (this would typically run in a separate process)
-export const stripeWorker = new Worker(
-  'stripe-webhooks',
-  async (job) => {
-    const { eventId, eventType, data } = job.data as StripeWebhookJob;
-    
-    logger.info({
-      eventId,
-      eventType,
-      jobId: job.id
-    }, 'Processing Stripe webhook job');
-
-    try {
-      switch (eventType) {
-        case 'customer.subscription.created':
-          await handleSubscriptionCreated(data);
-          break;
-        case 'customer.subscription.updated':
-          await handleSubscriptionUpdated(data);
-          break;
-        case 'customer.subscription.deleted':
-          await handleSubscriptionDeleted(data);
-          break;
-        case 'invoice.payment_succeeded':
-          await handlePaymentSucceeded(data);
-          break;
-        case 'invoice.payment_failed':
-          await handlePaymentFailed(data);
-          break;
-        default:
-          logger.info({ eventType }, 'Unhandled Stripe event type');
-      }
-
-      logger.info({
-        eventId,
-        eventType,
-        jobId: job.id
-      }, 'Stripe webhook job processed successfully');
-
-    } catch (error) {
-      logger.error({
-        error,
-        eventId,
-        eventType,
-        jobId: job.id
-      }, 'Failed to process Stripe webhook job');
-      throw error;
+export function getStripeWorker() {
+    if (stripeWorkerInstance) {
+        return stripeWorkerInstance;
     }
-  },
-  {
-    connection: redis,
-    concurrency: 5,
-  }
-);
+
+    const connection = getRedisConnection();
+    if (connection) {
+        stripeWorkerInstance = new Worker(
+            'stripe-webhooks',
+            async (job) => {
+              const { eventId, eventType, data } = job.data as StripeWebhookJob;
+              
+              logger.info({
+                eventId,
+                eventType,
+                jobId: job.id
+              }, 'Processing Stripe webhook job');
+          
+              try {
+                switch (eventType) {
+                  case 'customer.subscription.created':
+                    await handleSubscriptionCreated(data);
+                    break;
+                  case 'customer.subscription.updated':
+                    await handleSubscriptionUpdated(data);
+                    break;
+                  case 'customer.subscription.deleted':
+                    await handleSubscriptionDeleted(data);
+                    break;
+                  case 'invoice.payment_succeeded':
+                    await handlePaymentSucceeded(data);
+                    break;
+                  case 'invoice.payment_failed':
+                    await handlePaymentFailed(data);
+                    break;
+                  default:
+                    logger.info({ eventType }, 'Unhandled Stripe event type');
+                }
+          
+                logger.info({
+                  eventId,
+                  eventType,
+                  jobId: job.id
+                }, 'Stripe webhook job processed successfully');
+          
+              } catch (error) {
+                logger.error({
+                  error,
+                  eventId,
+                  eventType,
+                  jobId: job.id
+                }, 'Failed to process Stripe webhook job');
+                throw error;
+              }
+            },
+            {
+              connection,
+              concurrency: 5,
+            }
+          );
+        return stripeWorkerInstance;
+    }
+
+    return null;
+}
+
 
 // Event handlers
 async function handleSubscriptionCreated(subscription: any) {
@@ -175,8 +220,13 @@ async function handlePaymentFailed(invoice: any) {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   logger.info('Shutting down Stripe worker...');
-  await stripeWorker.close();
-  await redis.quit();
+  const worker = getStripeWorker();
+  if (worker) {
+    await worker.close();
+  }
+  const connection = getRedisConnection();
+  if (connection) {
+    await connection.quit();
+  }
   process.exit(0);
 });
-
