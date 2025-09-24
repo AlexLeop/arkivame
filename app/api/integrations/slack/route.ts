@@ -163,10 +163,7 @@ async function handleAppMention(event: any) {
 }
 
 async function handleReactionAdded(event: any) {
-  // If someone adds a specific emoji (like 📚 or 💾), auto-archive
-  const archiveEmojis = ['books', 'floppy_disk', 'bookmark', 'file_folder'];
-  
-  if (archiveEmojis.includes(event.reaction)) {
+  const archiveEmojis = ['livro', 'arkivame', 'books', 'floppy_disk', 'bookmark', 'file_folder'];
     try {
       const client = new WebClient(process.env.SLACK_BOT_TOKEN);
       
