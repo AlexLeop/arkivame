@@ -54,8 +54,8 @@ export async function generateSummary(content: ChatMessage[]): Promise<string> {
 
     return response.choices[0]?.message?.content || 'Não foi possível gerar resumo.';
   } catch (error) {
-    logger.error({ err: error }, 'Error generating summary');
-    throw new Error('Falha ao gerar resumo', { cause: error }); // Re-throw to let the caller handle it
+    logger.error('Error generating summary', { err: error });
+    throw new Error('Falha ao gerar resumo via OpenAI', { cause: error }); // Re-throw to let the caller handle it
   }
 }
 
@@ -86,8 +86,8 @@ export async function extractActionItems(content: ChatMessage[]): Promise<string
     const result = response.choices[0]?.message?.content || '';
     return result.split('\n').filter(line => line.trim().startsWith('-')).map(line => line.trim());
   } catch (error) {
-    logger.error({ err: error }, 'Error extracting action items');
-    throw new Error('Falha ao extrair itens de ação', { cause: error });
+    logger.error('Error extracting action items', { err: error });
+    throw new Error('Falha ao extrair itens de ação via OpenAI', { cause: error });
   }
 }
 
@@ -117,8 +117,8 @@ export async function detectTopics(content: ChatMessage[]): Promise<string[]> {
     const result = response.choices[0]?.message?.content || '';
     return result.split('\n').filter(line => line.trim()).map(line => line.trim());
   } catch (error) {
-    logger.error({ err: error }, 'Error detecting topics');
-    throw new Error('Falha ao detectar tópicos', { cause: error });
+    logger.error('Error detecting topics', { err: error });
+    throw new Error('Falha ao detectar tópicos via OpenAI', { cause: error });
   }
 }
 
@@ -150,8 +150,8 @@ export async function improveSearchQuery(query: string): Promise<string[]> {
     
     return [query, ...variations];
   } catch (error) {
-    logger.error({ err: error, query }, 'Error improving search query');
-    throw new Error('Falha ao melhorar a consulta de busca', { cause: error });
+    logger.error('Error improving search query', { err: error, query });
+    throw new Error('Falha ao melhorar a consulta de busca via OpenAI', { cause: error });
   }
 }
 
@@ -169,7 +169,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 
     return response.data[0].embedding;
   } catch (error) {
-    logger.error({ err: error }, 'Error generating text embedding');
-    throw new Error('Falha ao gerar embedding de texto', { cause: error });
+    logger.error('Error generating text embedding', { err: error });
+    throw new Error('Falha ao gerar embedding de texto via OpenAI', { cause: error });
   }
 }

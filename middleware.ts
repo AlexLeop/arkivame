@@ -176,5 +176,5 @@ async function handleAppLogic(request: NextRequest): Promise<NextResponse> {
  * The main middleware function that wraps application logic with CORS handling.
  */
 export async function middleware(request: NextRequest) {
-  return NextResponse.next();
+  return handleAppLogic(request);
 }

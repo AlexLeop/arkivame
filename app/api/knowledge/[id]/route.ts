@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { createTenantContext, createTenantPrisma, logAuditEvent } from '@/lib/tenant';
 import { prisma } from '@/lib/db';
+import { hasAdminPermission } from '@/lib/permissions';
 
 export const dynamic = "force-dynamic";
 
@@ -105,13 +106,26 @@ export async function PUT(
     
     const { title, content, summary, tags = [], isPublic } = body;
     
-    // Check if item exists and user has permission
+    // Check if item exists
     const existingItem = await tenantPrisma.knowledgeItems.findFirst({
       where: { id: params.id }
     });
     
     if (!existingItem) {
       return NextResponse.json({ error: 'Knowledge item not found' }, { status: 404 });
+    }
+    
+    // Verificação de permissão baseada no RBAC
+    // Administradores podem editar qualquer item
+    // Usuários comuns só podem editar itens que eles mesmos criaram
+    const isAdmin = await hasAdminPermission(prisma, session.user.id, tenantContext.organizationId);
+    const isCreator = existingItem.createdById === session.user.id;
+    
+    if (!isAdmin && !isCreator) {
+      return NextResponse.json(
+        { error: 'You do not have permission to edit this knowledge item' },
+        { status: 403 }
+      );
     }
     
     // Update knowledge item
@@ -194,6 +208,19 @@ export async function DELETE(
     
     if (!existingItem) {
       return NextResponse.json({ error: 'Knowledge item not found' }, { status: 404 });
+    }
+    
+    // Verificação de permissão baseada no RBAC
+    // Administradores podem excluir qualquer item
+    // Usuários comuns só podem excluir itens que eles mesmos criaram
+    const isAdmin = await hasAdminPermission(prisma, session.user.id, tenantContext.organizationId);
+    const isCreator = existingItem.createdById === session.user.id;
+    
+    if (!isAdmin && !isCreator) {
+      return NextResponse.json(
+        { error: 'You do not have permission to delete this knowledge item' },
+        { status: 403 }
+      );
     }
     
     // Soft delete by updating status

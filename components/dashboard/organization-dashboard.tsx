@@ -24,7 +24,8 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  User
+  User,
+  Edit
 } from 'lucide-react';
 import { ArkivameLogo } from '@/components/ui/arkivame-logo';
 import { Button } from '@/components/ui/button';
@@ -51,7 +52,9 @@ import {
 import { AddKnowledgeModal } from '@/components/modals/add-knowledge-modal';
 import { DeleteConfirmationModal } from '@/components/modals/delete-confirmation-modal';
 import { KnowledgeDetailModal } from '@/components/modals/knowledge-detail-modal';
+import { EditKnowledgeModal } from '@/components/modals/edit-knowledge-modal';
 import { UsageChart, TagChart } from '@/components/charts/analytics-charts';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Organization {
   id: string;
@@ -88,6 +91,7 @@ interface OrgStats {
 
 export function OrganizationDashboard({ organization }: { organization: Organization }) {
   const { data: session } = useSession();
+  const { toast } = useToast();
   const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
   const [stats, setStats] = useState<OrgStats>({
     totalKnowledge: 0,
@@ -105,6 +109,10 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
     item: KnowledgeItem | null;
   }>({ show: false, item: null });
   const [detailModal, setDetailModal] = useState<{
+    show: boolean;
+    itemId: string | null;
+  }>({ show: false, itemId: null });
+  const [editModal, setEditModal] = useState<{
     show: boolean;
     itemId: string | null;
   }>({ show: false, itemId: null });
@@ -229,13 +237,33 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
     }));
   };
 
+  const handleKnowledgeUpdated = (updatedKnowledge: KnowledgeItem) => {
+    setKnowledgeItems(prev => 
+      prev.map(item => item.id === updatedKnowledge.id ? updatedKnowledge : item)
+    );
+    toast({
+      title: "Knowledge Updated",
+      description: "The knowledge item has been successfully updated.",
+      variant: "success"
+    });
+  };
+
+  // Atualize a função handleDeleteKnowledge para usar a API real
   const handleDeleteKnowledge = async () => {
     if (!deleteModal.item) return;
     
     try {
-      // In a real app, make API call to delete
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Fazer chamada real à API para excluir
+      const response = await fetch(`/api/knowledge/${deleteModal.item.id}`, {
+        method: 'DELETE',
+      });
       
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete knowledge item');
+      }
+      
+      // Atualizar a UI após exclusão bem-sucedida
       setKnowledgeItems(prev => 
         prev.filter(item => item.id !== deleteModal.item!.id)
       );
@@ -244,11 +272,21 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
         ...prev,
         totalKnowledge: prev.totalKnowledge - 1
       }));
-
+  
+      toast({
+        title: "Knowledge Deleted",
+        description: "The knowledge item has been successfully deleted.",
+        variant: "success"
+      });
+  
       setDeleteModal({ show: false, item: null });
     } catch (error) {
       console.error('Failed to delete knowledge item:', error);
-      throw error;
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete knowledge item.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -605,6 +643,14 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
                               <Button 
                                 variant="ghost" 
                                 size="sm"
+                                title="Edit knowledge"
+                                onClick={() => setEditModal({ show: true, itemId: item.id })}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
                                 title="Delete knowledge"
                                 onClick={() => setDeleteModal({ show: true, item })}
                                 className="text-destructive hover:text-destructive"
@@ -761,13 +807,20 @@ export function OrganizationDashboard({ organization }: { organization: Organiza
         onOpenChange={(open) => setDeleteModal({ show: open, item: null })}
         onConfirm={handleDeleteKnowledge}
         title="Delete Knowledge Item"
-        description={`Are you sure you want to delete "${deleteModal.item?.title}"? This action cannot be undone.`}
+        description={deleteModal.item ? `Are you sure you want to delete "${deleteModal.item.title}"? This action cannot be undone.` : 'Are you sure you want to delete this item?'}
       />
 
       <KnowledgeDetailModal
         isOpen={detailModal.show}
         onClose={() => setDetailModal({ show: false, itemId: null })}
         itemId={detailModal.itemId}
+      />
+      
+      <EditKnowledgeModal
+        open={editModal.show}
+        onOpenChange={(open) => setEditModal({ show: open, itemId: null })}
+        onKnowledgeUpdated={handleKnowledgeUpdated}
+        itemId={editModal.itemId}
       />
     </div>
   );

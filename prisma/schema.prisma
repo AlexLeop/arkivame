@@ -97,7 +97,8 @@ model KnowledgeItem {
   content     Json // Array of message objects from thread
   summary     String? // AI-generated summary
   actionItems Json? // AI-generated action items
-  embedding   Unsupported("vector(1536)")?
+  topics      Json? // AI-generated topics
+  embedding   Json? // Store the generated embedding as JSON
   threadId    String? // Original Slack/Teams thread ID
   channelId   String?
   channelName String?

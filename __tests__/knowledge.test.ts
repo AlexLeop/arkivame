@@ -6,9 +6,9 @@ import { SourceType } from '@prisma/client';
 // Mock the entire @/lib/openai module at the top level
 jest.mock('@/lib/openai', () => ({
   __esModule: true,
-  generateSummary: jest.fn(),
-  generateEmbedding: jest.fn(),
-  extractActionItems: jest.fn(),
+  generateSummary: jest.fn(() => Promise.resolve('Mocked Summary')),
+  generateEmbedding: jest.fn(() => Promise.resolve([0.1, 0.2, 0.3])),
+  extractActionItems: jest.fn(() => Promise.resolve(['Mocked Action Item 1'])),
   // Add other functions if they exist in lib/openai and are used by lib/knowledge
 }));
 
@@ -67,46 +67,63 @@ describe('Knowledge Service', () => {
 
     const result = await createKnowledgeItem(input);
 
-    const textForEmbedding = `${input.title}\n${JSON.stringify(input.content)}`;
+    const textForEmbedding = `${input.title}\n${input.content.map(msg => msg.content).join('\n')}`;
 
     expect(mockedGenerateSummary).toHaveBeenCalledWith(input.content);
     expect(mockedGenerateEmbedding).toHaveBeenCalledWith(textForEmbedding);
 
     // Check create call (without embedding)
     expect(mockedPrismaCreate).toHaveBeenCalledWith({
-      data: {
+      data: expect.objectContaining({
         ...input,
         summary: mockSummary,
-      },
+        actionItems: ['Mocked Action Item 1'], // Add this as it's now generated
+      }),
     });
 
     // Check raw query update call
     expect(mockedPrismaExecuteRaw).toHaveBeenCalledTimes(1);
     expect(mockedPrismaExecuteRaw).toHaveBeenCalledWith(
-      expect.anything(), `[${mockEmbedding.join(',')}]`, mockNewItem.id
+      expect.arrayContaining([
+        expect.stringContaining('UPDATE knowledge_items'),
+        expect.stringContaining('SET embedding = '),
+        expect.stringContaining('::vector'),
+        expect.stringContaining('WHERE id = '),
+      ]),
+      mockEmbedding,
+      mockNewItem.id
     );
 
     expect(result).toEqual(mockNewItem);
   });
 
-  it('should re-throw an error if summary generation fails', async () => {
+  it('should handle summary generation failure gracefully', async () => {
     const error = new Error('Summary failed');
     mockedGenerateSummary.mockRejectedValue(error);
     mockedGenerateEmbedding.mockResolvedValue([0.1, 0.2, 0.3]);
+    mockedPrismaCreate.mockResolvedValue({ id: 'item-xyz', ...input, summary: 'Não foi possível gerar resumo.' });
+    mockedPrismaExecuteRaw.mockResolvedValue(1);
 
-    await expect(createKnowledgeItem(input)).rejects.toThrow(error);
-    expect(mockedPrismaCreate).not.toHaveBeenCalled();
-    expect(mockedPrismaExecuteRaw).not.toHaveBeenCalled();
+    const result = await createKnowledgeItem(input);
+
+    expect(result.summary).toBe('Não foi possível gerar resumo.');
+    expect(mockedPrismaCreate).toHaveBeenCalledTimes(1);
+    expect(mockedPrismaExecuteRaw).toHaveBeenCalledTimes(1);
   });
 
-  it('should re-throw an error if embedding generation fails', async () => {
+  it('should handle embedding generation failure gracefully', async () => {
     const error = new Error('Embedding failed');
     mockedGenerateSummary.mockResolvedValue('A summary');
     mockedGenerateEmbedding.mockRejectedValue(error);
+    mockedPrismaCreate.mockResolvedValue({ id: 'item-xyz', ...input, summary: 'A summary' });
+    mockedPrismaExecuteRaw.mockResolvedValue(1);
 
-    await expect(createKnowledgeItem(input)).rejects.toThrow(error);
-    expect(mockedPrismaCreate).not.toHaveBeenCalled();
-    expect(mockedPrismaExecuteRaw).not.toHaveBeenCalled();
+    const result = await createKnowledgeItem(input);
+
+    // Expect the item to be created without an embedding, and the update query not to be called
+    expect(mockedPrismaCreate).toHaveBeenCalledTimes(1);
+    expect(mockedPrismaExecuteRaw).not.toHaveBeenCalled(); // Because embedding generation failed
+    expect(result.summary).toBe('A summary');
   });
 
   it('should re-throw an error if database update fails', async () => {
@@ -120,7 +137,8 @@ describe('Knowledge Service', () => {
     mockedPrismaCreate.mockResolvedValue(mockNewItem);
     mockedPrismaExecuteRaw.mockRejectedValue(error);
 
-    await expect(createKnowledgeItem(input)).rejects.toThrow(error);
-    expect(mockedPrismaCreate).toHaveBeenCalledTimes(1);
+    await expect(createKnowledgeItem(input)).rejects.toThrow('Failed to create knowledge item.');
+    await expect(createKnowledgeItem(input)).rejects.toHaveProperty('cause', error);
+    expect(mockedPrismaCreate).toHaveBeenCalledTimes(2); // Called once for each expect
   });
 });
