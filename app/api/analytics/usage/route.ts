@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/auth-config';
 import { prisma } from '@/lib/db';
 
 export async function GET() {
@@ -16,17 +16,21 @@ export async function GET() {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // Get organization for the user (simplified - in real app you'd get from params)
+    // Get organization for the user
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: { organizations: true }
+      include: { 
+        organizationMembers: {
+          include: { organization: true }
+        }
+      }
     });
 
-    if (!user || user.organizations.length === 0) {
+    if (!user || user.organizationMembers.length === 0) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    const organizationId = user.organizations[0].id;
+    const organizationId = user.organizationMembers[0].organizationId;
 
     // Fetch overview data
     const [

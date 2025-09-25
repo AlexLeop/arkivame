@@ -5,6 +5,7 @@ import ClientProviders from '@/components/providers/client-providers';
 
 import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
+import '../styles/arkivame-design-system.css';
 
 const inter = Inter({ 
   subsets: ['latin'],
