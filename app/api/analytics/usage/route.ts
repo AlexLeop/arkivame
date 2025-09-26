@@ -20,17 +20,17 @@ export async function GET() {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: { 
-        organizationMembers: {
+        organizations: {
           include: { organization: true }
         }
       }
     });
 
-    if (!user || user.organizationMembers.length === 0) {
+    if (!user || user.organizations.length === 0) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    const organizationId = user.organizationMembers[0].organizationId;
+    const organizationId = user.organizations[0].organizationId;
 
     // Fetch overview data
     const [

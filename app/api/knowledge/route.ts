@@ -88,18 +88,18 @@ export async function GET(request: NextRequest) {
       const user = await prisma.user.findUnique({
         where: { email: session.user.email },
         include: { 
-          organizationMembers: {
+          organizations: {
             include: { organization: true }
           }
         }
       });
 
-      if (!user || user.organizationMembers.length === 0) {
+      if (!user || user.organizations.length === 0) {
         // Fallback to sample data if no organization
         return handleSampleData(validatedPage, validatedLimit, search, tags, source, author, dateRange);
       }
 
-      const organizationId = user.organizationMembers[0].organizationId;
+      const organizationId = user.organizations[0].organizationId;
 
       // Build where clause for filtering
       const whereClause: any = {
@@ -171,19 +171,14 @@ export async function GET(request: NextRequest) {
           id: true,
           title: true,
           content: true,
-          source: true,
-          channel: true,
-          author: true,
+          sourceType: true,
+          channelId: true,
           tags: true,
           createdAt: true,
           updatedAt: true,
-          views: true,
-          bookmarked: true,
+          viewCount: true,
           summary: true,
           actionItems: true,
-          decisions: true,
-          participants: true,
-          originalUrl: true
         }
       });
 
@@ -343,38 +338,32 @@ export async function POST(request: NextRequest) {
       const user = await prisma.user.findUnique({
         where: { email: session.user.email },
         include: { 
-          organizationMembers: {
+          organizations: {
             include: { organization: true }
           }
         }
       });
 
-      if (!user || user.organizationMembers.length === 0) {
+      if (!user || user.organizations.length === 0) {
         return NextResponse.json(
           { error: 'User not associated with any organization' },
           { status: 403 }
         );
       }
 
-      const organizationId = user.organizationMembers[0].organizationId;
+      const organizationId = user.organizations[0].organizationId;
 
       // Create new knowledge item
       const newItem = await prisma.knowledgeItem.create({
         data: {
-          title,
-          content,
-          source: source || 'MANUAL',
-          channel: channel || 'Manual Entry',
-          author: session.user.name || session.user.email,
-          tags: tags || [],
+          organizationId: organizationId,
+          title: title,
+          content: content,
+          sourceType: source,
+          channelId: channel,
+          createdById: user.id,
           summary: summary || null,
           actionItems: actionItems || [],
-          decisions: decisions || [],
-          participants: participants || [],
-          originalUrl: originalUrl || null,
-          organizationId,
-          views: 0,
-          bookmarked: false
         }
       });
 

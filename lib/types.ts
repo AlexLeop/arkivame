@@ -16,6 +16,7 @@ export interface User {
   name?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  image?: string | null;
   password: string;
   role: 'SUPER_ADMIN' | 'ADMIN' | 'USER';
   isActive: boolean;

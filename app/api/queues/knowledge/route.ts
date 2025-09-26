@@ -23,7 +23,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: message }, { status: 200 });
   }
 
-  const { teamId, channelId, threadTs, reactingUserId } = job.data;
+  const { payload } = job.data;
+  const { teamId, channelId, threadTs, reactingUserId } = payload;
 
   try {
     // 1. Encontra a organização correspondente no banco de dados

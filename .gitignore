@@ -1,6 +1,7 @@
 # Documentações
-fluxo_de_processos.md
-Níveis de Permissões e Acesso (RBAC).md
+docs/fluxo_de_processos.md
+docs/fluxo_de_processos.md
+docs/Níveis de Permissões e Acesso (RBAC).md
 
 # Dependencies
 /node_modules
