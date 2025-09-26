@@ -2,7 +2,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../lib/auth-config';
+import { authOptions } from '@/lib/auth-config';
 import { ArkivameLandingPage } from '@/components/landing/arkivame-landing-page';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 

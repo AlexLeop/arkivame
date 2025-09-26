@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../../../../lib/auth-config';
+import { authOptions } from '@/lib/auth-config';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest, { params }: { params: { organizationId: string, inviteId: string } }) {

@@ -6,7 +6,7 @@ import { TopTagsList } from '@/components/dashboard/top-tags-list';
 import { RecentActivityFeed } from '@/components/dashboard/recent-activity-feed';
 import { Eye, Tag, Users, BarChart } from 'lucide-react';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../lib/auth-config';
+import { authOptions } from '@/lib/auth-config';
 
 async function getAnalyticsData(organizationId: string) {
   const session = await getServerSession(authOptions);

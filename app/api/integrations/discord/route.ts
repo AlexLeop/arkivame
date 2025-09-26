@@ -7,7 +7,7 @@ import {
 import logger from '@/lib/logger';
 import { verifyDiscordRequest } from '@/lib/integrations/discord-service';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../../../lib/auth-config';
+import { authOptions } from '@/lib/auth-config';
 
 export async function POST(req: Request) {
   const { isValid, interaction } = await verifyDiscordRequest(req);
