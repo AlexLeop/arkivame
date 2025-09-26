@@ -18,10 +18,11 @@ export async function GET(request: NextRequest) {
     await validateUserOrgAccess(prisma, userId, orgId);
     return NextResponse.json({ authorized: true });
   } catch (error) {
-    if (error instanceof Error && error.name === 'NotAuthorizedError') {
-      return NextResponse.json({ authorized: false, error: error.message }, { status: 403 });
-    }
-    console.error('Error in check-org-access API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error in check-org-access API route', error);
+    // Ensure all error responses are JSON
+    return NextResponse.json(
+      { error: 'Internal Server Error', details: (error as Error).message },
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }

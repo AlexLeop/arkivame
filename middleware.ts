@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { NotAuthorizedError } from './lib/permissions';
 // import { validateUserOrgAccessServer } from './lib/server-utils';
@@ -107,14 +106,26 @@ async function handleAppLogic(request: NextRequest): Promise<NextResponse> {
     const orgIdMatch = pathname.match(/^\/dashboard\/([^\/]+)/);
     if (orgIdMatch) {
       const organizationId = orgIdMatch[1];
+      let origin = request.nextUrl.origin;
+      if (process.env.NODE_ENV === 'development' && request.nextUrl.protocol === 'https:') {
+        origin = 'http://localhost:3000'; // Force HTTP for local development if redirected to HTTPS
+      }
       try {
         const authCheckResponse = await fetch(
-          new URL(`/api/auth/check-org-access?userId=${token.sub}&orgId=${organizationId}`, request.nextUrl.origin)
+          `${origin}/api/auth/check-org-access?userId=${token.sub}&orgId=${organizationId}`,
         );
-        if (!authCheckResponse.ok) {
-          const errorData = await authCheckResponse.json();
-          throw new NotAuthorizedError(errorData.error || 'Not authorized');
+      if (!authCheckResponse.ok) {
+        let errorMessage = 'Not authorized';
+        const responseText = await authCheckResponse.text(); // Read body once as text
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonParseError) {
+          // If JSON parsing fails, use the raw text as the error message
+          errorMessage = responseText;
         }
+        throw new NotAuthorizedError(errorMessage);
+      }
       } catch (error) {
         if (error instanceof NotAuthorizedError) {
           // Redireciona para uma página de erro ou dashboard padrão se não autorizado

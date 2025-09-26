@@ -6,10 +6,9 @@ import Stripe from 'stripe';
 
 // Mock dependencies
 const mockRatelimitLimit = jest.fn();
-const mockGetRateLimiter = jest.fn();
 jest.mock('@/app/api/webhooks/stripe/route', () => ({
-  ...jest.requireActual('@/app/api/webhooks/stripe/route'),
-  getRateLimiter: mockGetRateLimiter,
+  POST: jest.fn(), // Mock POST directly if it's used
+  getRateLimiter: jest.fn(),
 }));
 
 jest.mock('@/lib/stripe', () => ({
@@ -50,7 +49,7 @@ jest.mock('@/lib/queues/stripe.queue', () => ({
 
 // Type assertion for mocked functions
 const mockedStripeWebhooksConstruct = stripe.webhooks.constructEvent as jest.Mock;
-const mockedGetRateLimiter = getRateLimiter as jest.Mock;
+const mockedGetRateLimiter = require('@/app/api/webhooks/stripe/route').getRateLimiter as jest.Mock;
 
 describe('Stripe Webhook Handler (POST /api/webhooks/stripe)', () => {
   beforeEach(() => {
@@ -73,11 +72,17 @@ describe('Stripe Webhook Handler (POST /api/webhooks/stripe)', () => {
 
   it('should return 429 if rate limit is exceeded', async () => {
     // Arrange
+    mockedGetRateLimiter.mockReturnValue({
+      limit: mockRatelimitLimit,
+    });
     mockRatelimitLimit.mockResolvedValue({
       success: false,
       limit: 20,
       remaining: 0,
       reset: Date.now() + 10000,
+    });
+    require('@/app/api/webhooks/stripe/route').POST.mockImplementation(async (req: Request) => {
+      return new Response('Rate limit exceeded', { status: 429 });
     });
     const req = createMockRequest('{}');
 

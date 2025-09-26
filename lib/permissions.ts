@@ -31,5 +31,5 @@ export async function hasAdminPermission(prisma: PrismaClient, userId: string, o
     },
   });
 
-  return organizationUser?.role === 'ADMIN';
+  return organizationUser?.role === 'ADMIN' || organizationUser?.role === 'OWNER';
 }
