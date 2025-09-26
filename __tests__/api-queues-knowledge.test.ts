@@ -41,11 +41,13 @@ describe('/api/queues/knowledge POST', () => {
   process.env.KNOWLEDGE_QUEUE_SECRET = validSecret;
 
   const jobData = {
-    source: 'SLACK', // Add this line
-    teamId: 'T123',
-    channelId: 'C456',
-    threadTs: '1629876543.000100',
-    reactingUserId: 'U_REACTING_USER', // Slack User ID
+    source: 'SLACK',
+    payload: {
+      teamId: 'T123',
+      channelId: 'C456',
+      threadTs: '1629876543.000100',
+      reactingUserId: 'U_REACTING_USER',
+    },
   };
 
   beforeEach(() => {
@@ -54,7 +56,7 @@ describe('/api/queues/knowledge POST', () => {
     // Simula a busca bem-sucedida do usuário interno através do ID do Slack
     mockedAccountFindUnique.mockResolvedValue({
       provider: 'slack',
-      providerAccountId: jobData.reactingUserId,
+      providerAccountId: jobData.payload.reactingUserId,
       user: {
         id: 'internal-user-id-abc',
         organizations: [{ organizationId: 'org-123' }],
@@ -77,8 +79,8 @@ describe('/api/queues/knowledge POST', () => {
   it('should successfully process a valid job', async () => {
     mockedGetSlackClientForEvent.mockReturnValue({});
     mockedGetSlackThreadMessages.mockResolvedValue({
-      messages: [{ text: 'Hello world', user: 'U_ROOT_USER', ts: jobData.threadTs }],
-      rootMessage: { text: 'Hello world', user: 'U_ROOT_USER', ts: jobData.threadTs },
+      messages: [{ text: 'Hello world', user: 'U_ROOT_USER', ts: jobData.payload.threadTs }],
+      rootMessage: { text: 'Hello world', user: 'U_ROOT_USER', ts: jobData.payload.threadTs },
       channelName: 'general',
     });
     mockedCreateKnowledgeItem.mockResolvedValue({ id: 'new-item-id' });

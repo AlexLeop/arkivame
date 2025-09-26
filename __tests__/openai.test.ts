@@ -92,7 +92,7 @@ describe('OpenAI Service', () => {
       mockCreateChatCompletion.mockRejectedValue(apiError);
 
       await expect(generateSummary(sampleContent)).rejects.toThrow('Falha ao gerar resumo');
-      expect(logger.error).toHaveBeenCalledWith('Error generating summary', { err: apiError });
+      expect(logger.error).toHaveBeenCalledWith(apiError, 'Error generating summary');
     });
   });
 
@@ -123,7 +123,7 @@ describe('OpenAI Service', () => {
       mockCreateChatCompletion.mockRejectedValue(apiError);
 
       await expect(extractActionItems(sampleContent)).rejects.toThrow('Falha ao extrair itens de ação');
-      expect(logger.error).toHaveBeenCalledWith('Error extracting action items', { err: apiError });
+      expect(logger.error).toHaveBeenCalledWith(apiError, 'Error extracting action items');
     });
   });
 
@@ -143,7 +143,7 @@ describe('OpenAI Service', () => {
       mockCreateChatCompletion.mockRejectedValue(apiError);
 
       await expect(detectTopics(sampleContent)).rejects.toThrow('Falha ao detectar tópicos');
-      expect(logger.error).toHaveBeenCalledWith('Error detecting topics', { err: apiError });
+      expect(logger.error).toHaveBeenCalledWith(apiError, 'Error detecting topics');
     });
   });
 
@@ -164,7 +164,7 @@ describe('OpenAI Service', () => {
       mockCreateChatCompletion.mockRejectedValue(apiError);
 
       await expect(improveSearchQuery('test')).rejects.toThrow('Falha ao melhorar a consulta de busca');
-      expect(logger.error).toHaveBeenCalledWith('Error improving search query', { err: apiError, query: 'test' });
+      expect(logger.error).toHaveBeenCalledWith(apiError, 'Error improving search query', { query: 'test' });
     });
   });
 
@@ -188,7 +188,7 @@ describe('OpenAI Service', () => {
       mockCreateEmbedding.mockRejectedValue(apiError);
 
       await expect(generateEmbedding('test')).rejects.toThrow('Falha ao gerar embedding de texto');
-      expect(logger.error).toHaveBeenCalledWith('Error generating text embedding', { err: apiError });
+      expect(logger.error).toHaveBeenCalledWith(apiError, 'Error generating text embedding');
     });
   });
 
