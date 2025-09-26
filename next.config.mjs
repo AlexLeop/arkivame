@@ -12,11 +12,6 @@ const nextConfig = {
   experimental: {
     instrumentationHook: true,
   },
-  webpack: (config) => {
-    config.resolve.alias['@'] = require('path').join(__dirname);
-    config.resolve.alias['@/lib'] = require('path').join(__dirname, 'lib');
-    return config;
-  },
 };
 
 export default withSentryConfig(
