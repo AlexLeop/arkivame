@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '../../../../lib/auth-config';
 import { logAudit } from '@/lib/audit';
 import { hasAdminPermission } from '@/lib/permissions';
 import { invitationRateLimiter } from '@/lib/rate-limit';
