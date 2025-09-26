@@ -12,6 +12,10 @@ const nextConfig = {
   experimental: {
     instrumentationHook: true,
   },
+  webpack: (config) => {
+    config.resolve.alias['@'] = require('path').join(__dirname);
+    return config;
+  },
 };
 
 export default withSentryConfig(
@@ -24,16 +28,6 @@ export default withSentryConfig(
     silent: true,
     org: 'pericia-10x',
     project: 'arkivame-prod',
-  },
-  {
-    // For all available options, see:
-    // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-    // Upload a larger set of source maps for prettier stack traces (increases build time)
-    widenClientFileUpload: true,
-
-    // Hides source maps from generated client bundles
-    hideSourceMaps: true,
 
     // Automatically tree-shake Sentry logger statements to reduce bundle size
     disableLogger: true,
